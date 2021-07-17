@@ -1,2 +1,2 @@
 # Dust
- A programming language  interpreted in C
+ A programming language interpreted in C
