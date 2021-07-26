@@ -11,6 +11,7 @@
 #ifndef TOKENIZER_H
 #define TOKENIZER_H
 
+
 typedef enum {
     TokenType_IDENTIFIER,
     TokenType_STRING,
@@ -26,15 +27,15 @@ typedef enum {
     TokenType_RSQRB,
     TokenType_NEXTSTM,
     TokenType_EOF,
-} TokenTypeD;
+} TokenType;
 
 typedef struct {
-    TokenTypeD type;
+    TokenType type;
     wchar_t *data;
     int x, y;
 } Token;
 
-Token *Token_new(TokenTypeD type, wchar_t *data);
+Token *Token_new(TokenType type, wchar_t *data);
 
 void Token_free(Token *token);
 
@@ -57,5 +58,6 @@ wchar_t *TokenArray_repr(TokenArray *token_array);
 TokenArray *tokenize(wchar_t *raw);
 
 TokenArray *tokenize_file(char *filepath);
+
 
 #endif

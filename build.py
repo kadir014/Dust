@@ -15,6 +15,6 @@ import platform
 
 if platform.system() == "Windows":
     #TODO: Add windows flags
-    os.system("gcc -o dust src/cli.c src/u8string.c src/tokenizer.c -I./include/")
+    os.system("gcc -o dust src/cli.c src/u8string.c src/error.c src/platform.c src/tokenizer.c src/parser.c -I./include/")
 else:
-    os.system("gcc -o dust src/cli.c src/u8string.c src/tokenizer.c -I./include/")
+    os.system("gcc -o dust src/cli.c src/u8string.c src/error.c src/platform.c src/tokenizer.c src/parser.c -I./include/")

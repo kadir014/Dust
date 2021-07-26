@@ -11,8 +11,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <wchar.h>
-#include <io.h>
-#include <fcntl.h>
+#include <wctype.h>
 #include <locale.h>
 #include <stdio.h>
 
@@ -20,12 +19,18 @@ typedef wchar_t u8char;
 typedef char byte;
 
 
+#if defined(_WIN32)
+#include <io.h>
+#include <fcntl.h>
+
 void u8winterminal() {
     setmode(_fileno(stdout), _O_U8TEXT);
-    setlocale(LC_ALL, "");
+    setlocale(LC_ALL, "en_US.UTF-8");
     system(" ");
 }
-
+#else
+void u8winterminal() {}
+#endif
 
 size_t u8len(u8char *str) {
     return wcslen(str);
@@ -60,7 +65,7 @@ u8char *u8upper(u8char *str) {
     wcscpy(dstr, str);
     int i = 0;
     while (i < wcslen(str)-1) {
-        dstr[i] = toupper(str[i]);
+        dstr[i] = towupper(str[i]);
         i++;
     }
     return dstr;
@@ -71,7 +76,7 @@ u8char *u8lower(u8char *str) {
     wcscpy(dstr, str);
     int i = 0;
     while (i < wcslen(str)-1) {
-        dstr[i] = tolower(str[i]);
+        dstr[i] = towlower(str[i]);
         i++;
     }
     return dstr;
@@ -167,9 +172,7 @@ byte u8isdigit(u8char *str) {
 byte u8isidentifier(u8char *str) {
     int i = 0;
 
-    if (str[i] == L'_' ||
-       (str[i] >= L'a' && str[i] <= L'z') ||
-       (str[i] >= L'A' && str[i] <= L'Z')) {
+    if (str[i] == L'_' || iswalnum(str[i]) != 0) {
         i++;
     }
     else {
@@ -177,12 +180,8 @@ byte u8isidentifier(u8char *str) {
     }
 
     while (i < wcslen(str)) {
-        if (str[i] == L'_' ||
-           (str[i] >= L'0' && str[i] <= L'9') ||
-           (str[i] >= L'a' && str[i] <= L'z') ||
-           (str[i] >= L'A' && str[i] <= L'Z')) {
+        if (str[i] == L'_' || iswalnum(str[i]) != 0) {
             i++;
-            continue;
         } else {
             return 0;
         }
@@ -206,4 +205,13 @@ byte u8isempty(u8char *str) {
         }
         return 1;
     }
+}
+
+u8char *u8fill(u8char *dest, u8char *str, int amount) {
+    int i = 0;
+    for (i = 0; i < amount; i++) {
+        dest = u8join(dest, str);
+    }
+
+    return dest;
 }

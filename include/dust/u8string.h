@@ -12,6 +12,8 @@
 #define U8STRING_H
 
 
+#include <wchar.h>
+
 typedef wchar_t u8char;
 typedef char byte;
 
@@ -47,6 +49,8 @@ byte u8isdigit(u8char *str);
 byte u8isidentifier(u8char *str);
 
 byte u8isempty(u8char *str);
+
+u8char *u8fill(u8char *dest, u8char *str, int amount);
 
 
 #endif

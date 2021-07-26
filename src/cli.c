@@ -12,39 +12,16 @@
 #include <string.h>
 #include <wchar.h>
 #include "dust/u8string.h"
+#include "dust/platform.h"
 #include "dust/tokenizer.h"
-
-
-u8char _GCC_VERSION_STRING[8];
-u8char *get_gcc_version() {
-    swprintf(_GCC_VERSION_STRING, 8, L"%d.%d.%d", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
-    return _GCC_VERSION_STRING;
-}
-
-#ifdef _WIN32
-u8char *get_platform() {
-    return L"Windows";
-}
-#elif __APPLE__
-u8char *get_platform() {
-    return L"MacOS";
-}
-#elif __linux__
-u8char *get_platform() {
-    return L"Linux";
-}
-#elif __FreeBSD__
-u8char *get_platform() {
-    return L"FreeBSD";
-}
-#else
-u8char *get_platform() {
-    return L"other";
-}
-#endif
+#include "dust/parser.h"
 
 
 int main(int argc, char *argv[]) {
+    if (u8isequal(get_platform(), L"Windows")) {
+        u8winterminal();
+    }
+
     if (argc == 1) {
         wprintf(L"\nUse 'dust help' to see available commands\n");
     }
@@ -54,13 +31,13 @@ int main(int argc, char *argv[]) {
             wprintf(L"\nDust Programming Language - Command Line Interface\n\n"
                     L"dust help                  : Information about CLI\n"
                     L"dust version               : Version related information\n"
-                    L"dust tokenize source [-fp] : Tokenizes the source, -fp arg. for filepath\n"
-                    L"\n");
+                    L"dust tokenize source [-fp] : Tokenizes the source, -fp for filepath\n"
+                    L"dust parse source [-fp]    : Parse the source, -fp for filepath\n");
         }
 
         else if (strcmp(argv[1], "version") == 0) {
             wprintf(L"\n"
-                    L"Dust version : 0.0.1\n"
+                    L"Dust version : 0.0.2\n"
                     L"GCC version  : %s\n"
                     L"Platform     : %s\n"
                     L"\n", get_gcc_version(), get_platform());
@@ -81,6 +58,10 @@ int main(int argc, char *argv[]) {
             wprintf(L"\n%ls\n", TokenArray_repr(tokens));
 
             TokenArray_free(tokens);
+        }
+
+        else if (strcmp(argv[1], "parse") == 0) {
+            wprintf(L"not implemented");
         }
     }
 

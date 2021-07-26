@@ -11,8 +11,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <wchar.h>
+#include <wctype.h>
 #include "dust/u8string.h"
-
+#include "dust/error.h"
 
 
 typedef enum {
@@ -30,11 +31,11 @@ typedef enum {
     TokenType_RSQRB,
     TokenType_NEXTSTM,
     TokenType_EOF,
-} TokenTypeD;
+} TokenType;
 
 
 typedef struct {
-    TokenTypeD type;
+    TokenType type;
     u8char *data;
     int x, y;
 } Token;
@@ -45,7 +46,7 @@ typedef struct {
   TokenType type  ->  Type of the Token
   char *data      ->  String data the Token holds
 */
-Token *Token_new(TokenTypeD type, u8char *data) {
+Token *Token_new(TokenType type, u8char *data) {
     Token *t = (Token *)malloc(sizeof(Token));
     
     t->type = type;
@@ -70,7 +71,7 @@ void Token_free(Token *token) {
 }
 
 /*
-  Return a representation string of Token
+  Return a string representation of Token
 
   Token *token  ->  Token to return a repr. string of
 */
@@ -169,7 +170,7 @@ void TokenArray_append(TokenArray *token_array, Token *token) {
 }
 
 /*
-  Return a representation string of TokenArray
+  Return a string representation of TokenArray
 
   TokenArray *token_array  ->  TokenArray to return a repr. string of
 */
@@ -218,8 +219,15 @@ void tokenize_append(Token* token, TokenArray *tokens, int x, int y) {
 
     else if (wcslen(t) > 0) {
         if (u8isidentifier(t) == 0) {
-            wprintf(L"\e[0;31mInvalid identifier\e[0m");
-            exit(1);
+            printf("%d\n", u8isidentifier(t));
+            printf("%lc %d\n", t[0], !!iswalnum(t[0]));
+            printf("%lc %d\n", t[1], !!iswalnum(t[1]));
+            printf("%lc %d\n", t[2], !!iswalnum(t[2]));
+            printf("%lc %d\n", t[3], !!iswalnum(t[3]));
+            printf("%lc %d\n", t[4], !!iswalnum(t[4]));
+            printf("%lc %d\n", t[5], !!iswalnum(t[5]));
+            u8char *errmsg = u8join(u8join(L"Invalid identifier '", t), L"'");
+            raise(ErrorType_Syntax, errmsg, L"<raw>", x, y);
         }
 
         token->type = TokenType_IDENTIFIER;
@@ -264,8 +272,7 @@ TokenArray *tokenize(u8char *raw){
                 x++;
 
                 if (i > wcslen(raw)) {
-                    wprintf(L"\e[0;31mString not closed\e[0m");
-                    exit(1);
+                    raise(ErrorType_Syntax, L"String not closed", L"<raw>", x, y);
                 }
 
                 if (raw[i] == string_type) break;
@@ -440,9 +447,10 @@ TokenArray *tokenize(u8char *raw){
   char *filepath  ->  Path of the file to tokenize
 */
 TokenArray *tokenize_file(char *filepath) {
-    u8char *buffer = 0;
+    u8char *buffer;
     long length;
     FILE *f = fopen(filepath, "r,ccs=UTF-8");
+    fwide(f, 1);
 
     if (f) {
         fseek(f, 0, SEEK_END);
@@ -451,7 +459,8 @@ TokenArray *tokenize_file(char *filepath) {
         buffer = malloc(length*sizeof(u8char));
 
         if (buffer) {
-            fread(buffer, sizeof(u8char), length, f);
+            //fread(buffer, sizeof(u8char), length, f);
+            while (fgetws(buffer, length, f) != NULL) {}
         }
 
         fclose(f);
