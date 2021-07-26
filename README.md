@@ -2,7 +2,7 @@
 <p>
   <img src="https://img.shields.io/badge/license-MIT-blue.svg">
   <img src="https://img.shields.io/badge/version-0.0.2-yellow">
-  <img src="https://app.codacy.com/project/badge/Grade/78b40ba8378d4292aa64c25178ca516c)](https://www.codacy.com/gh/kadir014/Dust/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=kadir014/Dust&amp;utm_campaign=Badge_Grade">
+  <img src="https://app.codacy.com/project/badge/Grade/78b40ba8378d4292aa64c25178ca516c">
 </p>
 Dust is a simple programming language interpreted in C.
 
