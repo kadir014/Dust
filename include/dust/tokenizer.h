@@ -43,11 +43,11 @@ wchar_t *Token_repr(Token *token);
 
 typedef struct {
     Token *array;
-    unsigned short size;
-    unsigned short used;
+    size_t size;
+    size_t used;
 } TokenArray;
 
-TokenArray *TokenArray_new(unsigned short def_size);
+TokenArray *TokenArray_new(size_t def_size);
 
 void TokenArray_free(TokenArray *token_array);
 

@@ -40,7 +40,8 @@ typedef enum {
 struct _Node {
     NodeType type;
     union {
-        double numeric;
+        long integer;
+        double floating;
         struct {
             OpType bin_operator;
             struct _Node *bin_left;
@@ -54,7 +55,9 @@ struct _Node {
 };
 typedef struct _Node Node;
 
-Node *NodeNumeric_new(double numeric);
+Node *NodeInteger_new(long integer);
+
+Node *NodeFloat_new(double floating);
 
 Node *NodeBinOp_new(OpType op, Node *left, Node *right);
 
@@ -63,6 +66,8 @@ Node *NodeUnaryOp_new(OpType op, Node *right);
 void Node_free(Node *node);
 
 u8char *Node_repr(Node *node, int ident);
+
+Node *parse_expr(TokenArray *tokens);
 
 
 #endif

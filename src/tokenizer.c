@@ -124,8 +124,8 @@ u8char *Token_repr(Token *token) {
 
 typedef struct {
     Token *array;
-    unsigned short size;
-    unsigned short used;
+    size_t size;
+    size_t used;
 } TokenArray;
 
 /*
@@ -133,7 +133,7 @@ typedef struct {
 
   unsigned short def_size  ->  Initial size of the array
 */
-TokenArray *TokenArray_new(unsigned short def_size) {
+TokenArray *TokenArray_new(size_t def_size) {
     TokenArray *a = (TokenArray *)malloc(sizeof(TokenArray));
 
     a->array = malloc(def_size * sizeof(Token));

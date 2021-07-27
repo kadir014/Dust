@@ -32,5 +32,6 @@ void raise(ErrorType type, u8char *message, u8char *source, int x, int y) {
             ANSI_FG_RED, type_repr, ANSI_FG_DARKGRAY, ANSI_END, message,
             ANSI_FG_DARKGRAY, (y+1),
             ANSI_END);
+            
     exit(1);
 }

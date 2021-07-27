@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
 
         else if (strcmp(argv[1], "version") == 0) {
             wprintf(L"\n"
-                    L"Dust version : 0.0.2\n"
+                    L"Dust version : 0.0.3\n"
                     L"GCC version  : %s\n"
                     L"Platform     : %s\n"
                     L"\n", get_gcc_version(), get_platform());
@@ -61,7 +61,27 @@ int main(int argc, char *argv[]) {
         }
 
         else if (strcmp(argv[1], "parse") == 0) {
-            wprintf(L"not implemented");
+            TokenArray *tokens = TokenArray_new(1);
+
+            if (argc == 4 && (strcmp(argv[3], "-fp")) == 0) {
+                tokens = tokenize_file(argv[2]);
+            }
+            else {
+                wchar_t ws[500];
+                swprintf(ws, 500, L"%hs", argv[2]);
+                tokens = tokenize(ws);
+            }
+
+            Node *expr = parse_expr(tokens);
+
+            wprintf(L"\n%ls\n", Node_repr(expr, 0));
+
+            TokenArray_free(tokens);
+            Node_free(expr);
+        }
+
+        else {
+            wprintf(L"\nUse 'dust help' to see available commands\n");
         }
     }
 
