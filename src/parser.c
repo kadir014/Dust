@@ -59,6 +59,35 @@ typedef enum {
 } OpType;
 
 
+typedef enum {
+    DeclType_INT8,
+    DeclType_INT16,
+    DeclType_INT64,
+    DeclType_INT32,
+    DeclType_INT128,
+    DeclType_UINT8,
+    DeclType_UINT16,
+    DeclType_UINT32,
+    DeclType_UINT64,
+    DeclType_UINT128,
+    DeclType_FLOAT32,
+    DeclType_FLOAT64,
+    DeclType_BOOL,
+    DeclType_STRING,
+    DeclType_BUFFER
+} DeclType;
+
+
+struct _Node;
+
+
+typedef struct {
+    struct _Node *array;
+    size_t size;
+    size_t used;
+} NodeArray;
+
+
 struct _Node {
     NodeType type;
     union {
@@ -73,6 +102,19 @@ struct _Node {
 
         /* VARIABLE */
         u8char *variable;
+
+        /* DECLERATION */
+        struct {
+            DeclType decl_type;
+            u8char *decl_var;
+            struct _Node *decl_expr;
+        };
+
+        /* ASSIGNMENT */
+        struct {
+            u8char *assign_var;
+            struct _Node *assign_expr;
+        };
 
         /* FUNCTION/CLASS CALL */
         u8char *call_base;
@@ -89,6 +131,9 @@ struct _Node {
             OpType unary_optype;
             struct _Node *unary_right;
         };
+
+        /* BODY */
+        NodeArray *body;
     };
 };
 typedef struct _Node Node;
@@ -154,6 +199,36 @@ Node *NodeVar_new(u8char *variable) {
 }
 
 /*
+  Create a new Decleration Node and return its pointer
+
+  u8char *type      ->  Type of the variable
+  u8char *var       ->  Identifier of variable
+  Node *expression  ->  Decleration expression
+*/
+Node *NodeDecl_new(DeclType type, u8char *variable, Node *expression) {
+    Node *node = (Node *)malloc(sizeof(Node));
+    node->type = NodeType_DECL;
+    node->decl_type = type;
+    node->decl_var  = variable;
+    node->decl_expr = expression;
+    return node;
+}
+
+/*
+  Create a new Assignment Node and return its pointer
+
+  u8char *var       ->  Identifier of variable
+  Node *expression  ->  Decleration expression
+*/
+Node *NodeAssign_new(u8char *variable, Node *expression) {
+    Node *node = (Node *)malloc(sizeof(Node));
+    node->type = NodeType_ASSIGN;
+    node->assign_var  = variable;
+    node->assign_expr = expression;
+    return node;
+}
+
+/*
   Create a new Binary Operator Node and return its pointer
 
   OpType op    ->  Type of the operator
@@ -180,6 +255,18 @@ Node *NodeUnaryOp_new(OpType op, Node *right) {
     node->type = NodeType_UNARYOP;
     node->unary_optype = op;
     node->unary_right = right;
+    return node;
+}
+
+/*
+  Create a new Body Node and return its pointer
+
+  NodeArray *node_array  ->  Array of statement nodes
+*/
+Node *NodeBody_new(NodeArray *node_array) {
+    Node *node = (Node *)malloc(sizeof(Node));
+    node->type = NodeType_BODY;
+    node->body = node_array;
     return node;
 }
 
@@ -242,6 +329,81 @@ u8char *Node_repr(Node *node, int ident) {
             finalstr = u8join(finalstr, L"call:\n");
             finalstr = u8join(finalstr, u8join(identstr, u8join(L"base: ", u8join(node->call_base, L"\n"))));
             finalstr = u8join(finalstr, u8join(identstr, L"args:\n"));
+            break;
+
+        case NodeType_DECL:
+            finalstr = u8join(finalstr, L"declaration:\n");
+            
+            switch (node->decl_type) {
+                case DeclType_INT8:
+                    finalstr = u8join(finalstr, u8join(identstr, L"type: int8\n"));
+                    break;
+
+                case DeclType_INT16:
+                    finalstr = u8join(finalstr, u8join(identstr, L"type: int16\n"));
+                    break;
+
+                case DeclType_INT32:
+                    finalstr = u8join(finalstr, u8join(identstr, L"type: int32\n"));
+                    break;
+
+                case DeclType_INT64:
+                    finalstr = u8join(finalstr, u8join(identstr, L"type: int64\n"));
+                    break;
+
+                case DeclType_INT128:
+                    finalstr = u8join(finalstr, u8join(identstr, L"type: int128\n"));
+                    break;
+
+                case DeclType_UINT8:
+                    finalstr = u8join(finalstr, u8join(identstr, L"type: uint8\n"));
+                    break;
+
+                case DeclType_UINT16:
+                    finalstr = u8join(finalstr, u8join(identstr, L"type: uint16\n"));
+                    break;
+
+                case DeclType_UINT32:
+                    finalstr = u8join(finalstr, u8join(identstr, L"type: uint32\n"));
+                    break;
+
+                case DeclType_UINT64:
+                    finalstr = u8join(finalstr, u8join(identstr, L"type: uint64\n"));
+                    break;
+
+                case DeclType_UINT128:
+                    finalstr = u8join(finalstr, u8join(identstr, L"type: uint128\n"));
+                    break;
+
+                case DeclType_FLOAT32:
+                    finalstr = u8join(finalstr, u8join(identstr, L"type: float32\n"));
+                    break;
+
+                case DeclType_FLOAT64:
+                    finalstr = u8join(finalstr, u8join(identstr, L"type: float64\n"));
+                    break;
+
+                case DeclType_BOOL:
+                    finalstr = u8join(finalstr, u8join(identstr, L"type: bool\n"));
+                    break;
+
+                case DeclType_STRING:
+                    finalstr = u8join(finalstr, u8join(identstr, L"type: string\n"));
+                    break;
+
+                case DeclType_BUFFER:
+                    finalstr = u8join(finalstr, u8join(identstr, L"type: buffer\n"));
+                    break;
+            }
+
+            finalstr = u8join(u8join(finalstr, u8join(identstr, u8join(L"var: ", node->decl_var))), L"\n");
+            finalstr = u8join(finalstr, u8join(identstr, u8join(L"expr: ", Node_repr(node->decl_expr, ident+1))));
+            break;
+
+        case NodeType_ASSIGN:
+            finalstr = u8join(finalstr, L"assignment:\n");
+            finalstr = u8join(u8join(finalstr, u8join(identstr, u8join(L"var: ", node->decl_var))), L"\n");
+            finalstr =u8join(finalstr, u8join(identstr, u8join(L"expr: ", Node_repr(node->decl_expr, ident+1))));
             break;
 
         case NodeType_BINOP:
@@ -332,9 +494,154 @@ u8char *Node_repr(Node *node, int ident) {
 
             finalstr = u8join(finalstr, u8join(identstr, Node_repr(node->unary_right, ident+1)));
             break;
+
+        case NodeType_BODY:
+            finalstr = u8join(finalstr, L"body:\n");
+            
+            int i = 0;
+            while (i < node->body->used) {
+                finalstr = u8join(finalstr, u8join(identstr, Node_repr(&(node->body->array[i]), ident+1)));
+                i++;
+            }
+
+            break;
     }
 
     return finalstr;
+}
+
+
+/*
+  Create a new NodeArray and return its pointer
+
+  size_t def_size  ->  Initial size of the array
+*/
+NodeArray *NodeArray_new(size_t def_size) {
+    NodeArray *node_array = (NodeArray *)malloc(sizeof(NodeArray));
+
+    node_array->array = malloc(def_size * sizeof(Node));
+    node_array->used = 0;
+    node_array->size = def_size;
+}
+
+/*
+  Release all resources used by the NodeArray
+
+  NodeArray *node_array  ->  NodeArray to free
+*/
+void NodeArray_free(NodeArray *node_array) {
+    free(node_array->array);
+    node_array->array = NULL;
+    node_array->used = 0;
+    node_array->size = 0;
+    free(node_array);
+}
+
+/*
+  Append a Node to NodeArray
+
+  NodeArray *node_array  ->  NodeArray to append to
+  Node *node             ->  Node to append
+*/
+void NodeArray_append(NodeArray *node_array, Node *node) {
+    if (node_array->used == node_array->size) {
+        node_array->size *= 2;
+        node_array->array = realloc(node_array->array, node_array->size * sizeof(Node));
+    }
+
+    node_array->array[node_array->used++] = *node;
+}
+
+
+DeclType get_decltype(u8char *tokenval);
+
+Node *parse_expr(TokenArray *tokens);
+
+
+Node *parse_body(TokenArray *tokens) {
+    int i = 0;
+    NodeArray *node_array = NodeArray_new(1);
+
+    while (i < tokens->used) {
+        Token *token = &(tokens->array[i]);
+
+        /* BODY   {statement; statement; ...} */
+        if (token->type == TokenType_LCURLY) {
+            TokenArray *slice = TokenArray_slice(tokens, i+1);
+            NodeArray_append(node_array, parse_body(slice));
+            TokenArray_free(slice);
+        }
+
+        /* End of body */
+        else if (token->type == TokenType_RCURLY) {
+            break;
+        }
+
+        else if (token->type == TokenType_EOF) {
+            break;
+        }
+
+        else if (token->type == TokenType_NEXTSTM) {
+            break;
+        }
+
+        else if (token->type == TokenType_IDENTIFIER) {
+
+            /* DECLERATION   type identifier = expression; */
+            if ((&(tokens->array[i+1]))->type == TokenType_IDENTIFIER &&
+                (&(tokens->array[i+2]))->type == TokenType_OPERATOR   &&
+                u8isequal((&(tokens->array[i+2]))->data, L"=")) {
+                    
+                    DeclType type = get_decltype((&(tokens->array[i]))->data);
+                    u8char *var = (&(tokens->array[i+1]))->data;
+
+                    TokenArray *slice = TokenArray_slicet(tokens, i+3);
+                    TokenArray_append(slice, Token_new(TokenType_EOF, L""));
+                    Node *expr = parse_expr(slice);
+                    TokenArray_free(slice);
+
+                    NodeArray_append(node_array, NodeDecl_new(type, var, expr));
+
+                    // end of the expression
+                    int a = 0;
+                    while (i+a < tokens->used) {
+                        if ((&(tokens->array[a+i]))->type == TokenType_NEXTSTM ||
+                            (&(tokens->array[a+i]))->type == TokenType_EOF) break;
+                        a++;
+                    }
+                    i += a+1;
+                    continue;
+                }
+            
+            /* ASSIGNMENT   identifier = expression; */
+            else if ((&(tokens->array[i]))->type == TokenType_IDENTIFIER &&
+                     (&(tokens->array[i+1]))->type == TokenType_OPERATOR &&
+                      u8isequal((&(tokens->array[i+1]))->data, L"=")) {
+                    
+                        u8char *var = (&(tokens->array[i]))->data;
+
+                        TokenArray *slice = TokenArray_slicet(tokens, i+2);
+                        TokenArray_append(slice, Token_new(TokenType_EOF, L""));
+                        Node *expr = parse_expr(slice);
+                        TokenArray_free(slice);
+
+                        NodeArray_append(node_array, NodeAssign_new(var, expr));
+
+                        // end of the expression
+                        int a = 0;
+                        while (i+a < tokens->used) {
+                            if ((&(tokens->array[i+1]))->type == TokenType_NEXTSTM ||
+                                (&(tokens->array[i+1]))->type == TokenType_EOF) break;
+                            a++;
+                        }
+                        i += a+1;
+                        continue;
+                }
+        }
+    i++;
+    }
+
+    return NodeBody_new(node_array);
 }
 
 
@@ -391,6 +698,63 @@ OpType get_optype(u8char *tokenval) {
     }
 }
 
+DeclType get_decltype(u8char *tokenval) {
+    if (u8isequal(tokenval, L"int")) {
+        return DeclType_INT32;
+    }
+    else if (u8isequal(tokenval, L"int8")) {
+        return DeclType_INT8;
+    }
+    else if (u8isequal(tokenval, L"int16")) {
+        return DeclType_INT16;
+    }
+    else if (u8isequal(tokenval, L"int32")) {
+        return DeclType_INT32;
+    }
+    else if (u8isequal(tokenval, L"int64")) {
+        return DeclType_INT64;
+    }
+    else if (u8isequal(tokenval, L"int128")) {
+        return DeclType_INT128;
+    }
+    else if (u8isequal(tokenval, L"uint")) {
+        return DeclType_UINT32;
+    }
+    else if (u8isequal(tokenval, L"uint8")) {
+        return DeclType_UINT8;
+    }
+    else if (u8isequal(tokenval, L"uint16")) {
+        return DeclType_UINT16;
+    }
+    else if (u8isequal(tokenval, L"uint32")) {
+        return DeclType_UINT32;
+    }
+    else if (u8isequal(tokenval, L"uint64")) {
+        return DeclType_UINT64;
+    }
+    else if (u8isequal(tokenval, L"uint128")) {
+        return DeclType_UINT128;
+    }
+    else if (u8isequal(tokenval, L"float")) {
+        return DeclType_FLOAT32;
+    }
+    else if (u8isequal(tokenval, L"float32")) {
+        return DeclType_FLOAT32;
+    }
+    else if (u8isequal(tokenval, L"float64")) {
+        return DeclType_FLOAT64;
+    }
+    else if (u8isequal(tokenval, L"bool")) {
+        return DeclType_BOOL;
+    }
+    else if (u8isequal(tokenval, L"string")) {
+        return DeclType_STRING;
+    }
+    else if (u8isequal(tokenval, L"buffer")) {
+        return DeclType_BUFFER;
+    }
+}
+
 Token *current_token(TokenArray *tokens) {
     return &(tokens->array[_token_index]);
 }
@@ -432,10 +796,9 @@ Node *parse_expr_FACTOR(TokenArray *tokens) {
         return returnnode;
     }
 
-    /* Numeric literal */
+    /* Integer/Float literal */
     else if (token->type == TokenType_NUMERIC) {
         u8char *end;
-        //Node *returnnode = NodeNumeric_new(wcstod(current_token(tokens)->data, &end));
         Node *returnnode = NodeInteger_new(wcstol(current_token(tokens)->data, &end, 10));
         next_token(tokens);
         return returnnode;
@@ -445,7 +808,6 @@ Node *parse_expr_FACTOR(TokenArray *tokens) {
     else if (token->type == TokenType_IDENTIFIER) {
         next_token(tokens);
 
-        // call
         if (current_token(tokens)->type == TokenType_LPAREN) {
             next_token(tokens);
 
@@ -467,7 +829,6 @@ Node *parse_expr_FACTOR(TokenArray *tokens) {
 
             // TODO: Check arguments
         }
-        // identifier
         else {
             return NodeVar_new(token->data);
         }

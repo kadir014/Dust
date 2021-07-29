@@ -170,6 +170,42 @@ void TokenArray_append(TokenArray *token_array, Token *token) {
 }
 
 /*
+  Append a sliced copy of TokenArray
+
+  TokenArray *token_array  ->  TokenArray to slice
+  int index            ->  Index to slice from
+*/
+TokenArray *TokenArray_slice(TokenArray *token_array, int index) {
+    TokenArray *slice_array = TokenArray_new(1);
+
+    while (index < token_array->used) {
+        TokenArray_append(slice_array, &(token_array->array[index]));
+        index++;
+    }
+
+    return slice_array;
+}
+
+/*
+  Append a sliced copy of TokenArray
+
+  TokenArray *token_array  ->  TokenArray to slice
+  int index            ->  Index to slice from
+*/
+TokenArray *TokenArray_slicet(TokenArray *token_array, int index) {
+    TokenArray *slice_array = TokenArray_new(1);
+
+    while (index < token_array->used) {
+        if (token_array->array[index].type == TokenType_NEXTSTM ||
+            token_array->array[index].type == TokenType_EOF) break;
+        TokenArray_append(slice_array, &(token_array->array[index]));
+        index++;
+    }
+
+    return slice_array;
+}
+
+/*
   Return a string representation of TokenArray
 
   TokenArray *token_array  ->  TokenArray to return a repr. string of

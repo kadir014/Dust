@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
 
         else if (strcmp(argv[1], "version") == 0) {
             wprintf(L"\n"
-                    L"Dust version : 0.0.3\n"
+                    L"Dust version : 0.0.4\n"
                     L"GCC version  : %s\n"
                     L"Platform     : %s\n"
                     L"\n", get_gcc_version(), get_platform());
@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
                 tokens = tokenize(ws);
             }
 
-            Node *expr = parse_expr(tokens);
+            Node *expr = parse_body(tokens);
 
             wprintf(L"\n%ls\n", Node_repr(expr, 0));
 

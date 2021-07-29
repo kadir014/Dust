@@ -53,6 +53,10 @@ void TokenArray_free(TokenArray *token_array);
 
 void TokenArray_append(TokenArray *token_array, Token *token);
 
+TokenArray *TokenArray_slice(TokenArray *token_array, int index);
+
+TokenArray *TokenArray_slicet(TokenArray *token_array, int index);
+
 wchar_t *TokenArray_repr(TokenArray *token_array);
 
 TokenArray *tokenize(wchar_t *raw);
