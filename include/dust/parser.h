@@ -115,7 +115,10 @@ struct _Node {
             struct _Node *unary_right;
         };
 
-        NodeArray *body;
+        struct {
+            NodeArray *body;
+            int body_tokens;
+        };
     };
 };
 typedef struct _Node Node;

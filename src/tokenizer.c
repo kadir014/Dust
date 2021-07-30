@@ -290,7 +290,8 @@ TokenArray *tokenize(u8char *raw){
     TokenArray *tokens = TokenArray_new(1);
     Token *token = Token_new(TokenType_EOF, L"");
 
-    int x, y = 0;
+    int x = 0;
+    int y = 0;
     u8char chr = L'\0';
     int i = 0;
     u8char string_type = L'\0';
@@ -338,11 +339,10 @@ TokenArray *tokenize(u8char *raw){
             if (wcslen(token->data) > 0) {
                 tokenize_append(token, tokens, x, y);
                 token = Token_new(TokenType_EOF, L"");
-
-                i++;
-                x++;
-                continue;
             }
+            i++;
+            x++;
+            continue;
         }
 
         else if (chr == L'+' || chr == L'-' || chr == L'*' ||
@@ -472,6 +472,10 @@ TokenArray *tokenize(u8char *raw){
     // Change last NEXTSTM token to EOF token
     if (tokens->array[tokens->used - 1].type == TokenType_NEXTSTM) {
         tokens->array[tokens->used - 1] = *Token_new(TokenType_EOF, L"");
+    }
+    // Add EOF token if necessary
+    else if (tokens->array[tokens->used - 1].type == TokenType_RCURLY) {
+        TokenArray_append(tokens, Token_new(TokenType_EOF, L""));
     }
 
     return tokens;

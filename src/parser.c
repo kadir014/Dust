@@ -133,7 +133,10 @@ struct _Node {
         };
 
         /* BODY */
-        NodeArray *body;
+        struct {
+            NodeArray *body;
+            int body_tokens;
+        };
     };
 };
 typedef struct _Node Node;
@@ -262,11 +265,13 @@ Node *NodeUnaryOp_new(OpType op, Node *right) {
   Create a new Body Node and return its pointer
 
   NodeArray *node_array  ->  Array of statement nodes
+  int tokens             ->  Number of tokens body includes
 */
-Node *NodeBody_new(NodeArray *node_array) {
+Node *NodeBody_new(NodeArray *node_array, int tokens) {
     Node *node = (Node *)malloc(sizeof(Node));
     node->type = NodeType_BODY;
     node->body = node_array;
+    node->body_tokens = tokens;
     return node;
 }
 
@@ -402,8 +407,8 @@ u8char *Node_repr(Node *node, int ident) {
 
         case NodeType_ASSIGN:
             finalstr = u8join(finalstr, L"assignment:\n");
-            finalstr = u8join(u8join(finalstr, u8join(identstr, u8join(L"var: ", node->decl_var))), L"\n");
-            finalstr =u8join(finalstr, u8join(identstr, u8join(L"expr: ", Node_repr(node->decl_expr, ident+1))));
+            finalstr = u8join(u8join(finalstr, u8join(identstr, u8join(L"var: ", node->assign_var))), L"\n");
+            finalstr = u8join(finalstr, u8join(identstr, u8join(L"expr: ", Node_repr(node->assign_expr, ident+1))));
             break;
 
         case NodeType_BINOP:
@@ -568,8 +573,12 @@ Node *parse_body(TokenArray *tokens) {
         /* BODY   {statement; statement; ...} */
         if (token->type == TokenType_LCURLY) {
             TokenArray *slice = TokenArray_slice(tokens, i+1);
-            NodeArray_append(node_array, parse_body(slice));
+            Node *body = parse_body(slice);
+            NodeArray_append(node_array, body);
             TokenArray_free(slice);
+            i += body->body_tokens+2;
+            wprintf(L"%ls\n", Token_repr(&(tokens->array[i])));
+            continue;
         }
 
         /* End of body */
@@ -582,7 +591,8 @@ Node *parse_body(TokenArray *tokens) {
         }
 
         else if (token->type == TokenType_NEXTSTM) {
-            break;
+            i++;
+            continue;
         }
 
         else if (token->type == TokenType_IDENTIFIER) {
@@ -641,7 +651,7 @@ Node *parse_body(TokenArray *tokens) {
     i++;
     }
 
-    return NodeBody_new(node_array);
+    return NodeBody_new(node_array, i);
 }
 
 
@@ -908,6 +918,11 @@ Node *parse_expr_EXPR(TokenArray *tokens) {
                     left = NodeBinOp_new(optype, left, parse_expr_TERM(tokens));
             }
     }
+
+    if (!(current_token(tokens)->type == TokenType_NEXTSTM ||
+        current_token(tokens)->type == TokenType_EOF)) {
+            raise(ErrorType_Syntax, L"Expected ;", L"<raw>", current_token(tokens)->x, current_token(tokens)->y);
+        }
 
     return left;
 }
