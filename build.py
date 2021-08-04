@@ -14,7 +14,9 @@ import platform
 import time
 
 # Delete previously compiled binary
-if os.path.exists("dust.exe"): os.remove("dust.exe")
+if platform.system() == "Windows": binaryfile = "dust.exe"
+else: binaryfile = "dust"
+if os.path.exists(binaryfile): os.remove(binaryfile)
 
 print("Started compiling...\n")
 start = time.time()
@@ -26,6 +28,6 @@ else:
     os.system("gcc -o dust src/cli.c src/u8string.c src/error.c src/platform.c src/tokenizer.c src/parser.c -I./include/")
 
 # Compiled succesfully
-if os.path.exists("dust.exe"):
+if os.path.exists(binaryfile):
   end = time.time() - start
   print(f"Compiled in {round(end, 3)} secs ({int(end*1000)} ms)")

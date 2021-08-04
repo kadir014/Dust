@@ -19,16 +19,20 @@ typedef enum {
     NodeType_VAR,
     NodeType_DECL,
     NodeType_ASSIGN,
-    NodeType_IMPORT,
     NodeType_BINOP,
     NodeType_UNARYOP,
     NodeType_RUNARYOP,
+    NodeType_IMPORT,
+    NodeType_IMPORTF,
     NodeType_CHILD,
     NodeType_SUBSCRIPT,
     NodeType_CALL,
     NodeType_BODY,
     NodeType_IF,
+    NodeType_ELIF,
+    NodeType_ELSE,
     NodeType_WHEN,
+    NodeType_REPEAT,
     NodeType_FOR,
     NodeType_WHILE
 } NodeType;
@@ -50,7 +54,8 @@ typedef enum {
     OpType_LT,
     OpType_LE,
     OpType_GT,
-    OpType_GE
+    OpType_GE,
+    OpType_HAS
 } OpType;
 
 
@@ -119,6 +124,12 @@ struct _Node {
             NodeArray *body;
             int body_tokens;
         };
+
+        /* IF */
+        struct {
+            struct _Node *if_expr;
+            struct _Node *if_body;
+        };
     };
 };
 typedef struct _Node Node;
@@ -127,9 +138,27 @@ Node *NodeInteger_new(long integer);
 
 Node *NodeFloat_new(double floating);
 
+Node *NodeString_new(u8char *str);
+
+Node *NodeCall_new(u8char *call_base);
+
+Node *NodeVar_new(u8char *variable);
+
+Node *NodeDecl_new(DeclType type, u8char *variable, Node *expression);
+
+Node *NodeAssign_new(u8char *variable, Node *expression);
+
 Node *NodeBinOp_new(OpType op, Node *left, Node *right);
 
 Node *NodeUnaryOp_new(OpType op, Node *right);
+
+Node *NodeImport_new(u8char *module);
+
+Node *NodeImportFrom_new(u8char *module, u8char *member);
+
+Node *NodeBody_new(NodeArray *node_array, int tokens);
+
+Node *NodeIf_new(Node *expression, Node *body);
 
 void Node_free(Node *node);
 

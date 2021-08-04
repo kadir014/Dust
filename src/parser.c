@@ -24,16 +24,20 @@ typedef enum {
     NodeType_VAR,
     NodeType_DECL,
     NodeType_ASSIGN,
-    NodeType_IMPORT,
     NodeType_BINOP,
     NodeType_UNARYOP,
     NodeType_RUNARYOP,
+    NodeType_IMPORT,
+    NodeType_IMPORTF,
     NodeType_CHILD,
     NodeType_SUBSCRIPT,
     NodeType_CALL,
     NodeType_BODY,
     NodeType_IF,
+    NodeType_ELIF,
+    NodeType_ELSE,
     NodeType_WHEN,
+    NodeType_REPEAT,
     NodeType_FOR,
     NodeType_WHILE
 } NodeType;
@@ -55,7 +59,8 @@ typedef enum {
     OpType_LT,
     OpType_LE,
     OpType_GT,
-    OpType_GE
+    OpType_GE,
+    OpType_HAS
 } OpType;
 
 
@@ -132,10 +137,22 @@ struct _Node {
             struct _Node *unary_right;
         };
 
+        /* IMPORT */
+        struct {
+            u8char *import_module;
+            u8char *import_member;
+        };
+
         /* BODY */
         struct {
             NodeArray *body;
             int body_tokens;
+        };
+
+        /* IF */
+        struct {
+            struct _Node *if_expr;
+            struct _Node *if_body;
         };
     };
 };
@@ -262,6 +279,32 @@ Node *NodeUnaryOp_new(OpType op, Node *right) {
 }
 
 /*
+  Create a new Import Node and return its pointer
+
+  u8char *module  ->  Name of the module
+*/
+Node *NodeImport_new(u8char *module) {
+    Node *node = (Node *)malloc(sizeof(Node));
+    node->type = NodeType_IMPORT;
+    node->import_module = module;
+    return node;
+}
+
+/*
+  Create a new Relative Import Node and return its pointer
+
+  u8char *module  ->  Name of the module
+  u8char *member  ->  Member to import from module
+*/
+Node *NodeImportFrom_new(u8char *module, u8char *member) {
+    Node *node = (Node *)malloc(sizeof(Node));
+    node->type = NodeType_IMPORTF;
+    node->import_module = module;
+    node->import_member = member;
+    return node;
+}
+
+/*
   Create a new Body Node and return its pointer
 
   NodeArray *node_array  ->  Array of statement nodes
@@ -272,6 +315,20 @@ Node *NodeBody_new(NodeArray *node_array, int tokens) {
     node->type = NodeType_BODY;
     node->body = node_array;
     node->body_tokens = tokens;
+    return node;
+}
+
+/*
+  Create a new If Node and return its pointer
+
+  Node *expression  ->  If statement's condition
+  Node *body        ->  If statement's body
+*/
+Node *NodeIf_new(Node *expression, Node *body) {
+    Node *node = (Node *)malloc(sizeof(Node));
+    node->type = NodeType_IF;
+    node->if_expr = expression;
+    node->if_body = body;
     return node;
 }
 
@@ -313,7 +370,7 @@ u8char *Node_repr(Node *node, int ident) {
 
     switch (node->type) {
         case NodeType_INTEGER:
-            swprintf(numstr, 50, L"%d", node->integer);
+            swprintf(numstr, 50, L"%ld", node->integer);
             finalstr = u8join(u8join(finalstr, u8join(L"integer: ", numstr)), L"\n");
             break;
 
@@ -474,6 +531,10 @@ u8char *Node_repr(Node *node, int ident) {
                 case OpType_GE:
                     finalstr = u8join(finalstr, u8join(identstr, L"op: >=\n"));
                     break;
+
+                case OpType_HAS:
+                    finalstr = u8join(finalstr, u8join(identstr, L"op: has\n"));
+                    break;
             }
 
             finalstr = u8join(finalstr, u8join(identstr, Node_repr(node->bin_left, ident+1)));
@@ -500,6 +561,18 @@ u8char *Node_repr(Node *node, int ident) {
             finalstr = u8join(finalstr, u8join(identstr, Node_repr(node->unary_right, ident+1)));
             break;
 
+        case NodeType_IMPORT:
+            finalstr = u8join(finalstr, L"import:\n");
+            finalstr = u8join(finalstr, u8join(identstr, u8join(L"module: ", u8join(node->import_module, L"\n"))));
+            break;
+
+        case NodeType_IMPORTF:
+            finalstr = u8join(finalstr, L"import:\n");
+            finalstr = u8join(finalstr, u8join(identstr, u8join(L"member: ", u8join(node->import_member, L"\n"))));
+            finalstr = u8join(finalstr, u8join(identstr, L"from:\n"));
+            finalstr = u8join(finalstr, u8join(identstr, u8join(L"    ", u8join(L"module: ", u8join(node->import_module, L"\n")))));
+            break;
+
         case NodeType_BODY:
             finalstr = u8join(finalstr, L"body:\n");
             
@@ -508,7 +581,13 @@ u8char *Node_repr(Node *node, int ident) {
                 finalstr = u8join(finalstr, u8join(identstr, Node_repr(&(node->body->array[i]), ident+1)));
                 i++;
             }
+            break;
 
+        case NodeType_IF:
+            finalstr = u8join(finalstr, L"if:\n");
+            finalstr = u8join(finalstr, u8join(identstr, L"condition:\n"));
+            finalstr = u8join(finalstr, u8join(identstr, Node_repr(node->if_expr, ident+1)));
+            finalstr = u8join(finalstr, u8join(identstr, Node_repr(node->if_body, ident+1)));
             break;
     }
 
@@ -562,9 +641,17 @@ DeclType get_decltype(u8char *tokenval);
 
 Node *parse_expr(TokenArray *tokens);
 
+Node *parse_expr_EXPR(TokenArray *tokens);
+
+Token *current_token(TokenArray *tokens);
+
+size_t _token_index = 0;
+size_t _last_token_count = 0;
+int _body_count = 0;
+
 
 Node *parse_body(TokenArray *tokens) {
-    int i = 0;
+    size_t i = 0;
     NodeArray *node_array = NodeArray_new(1);
 
     while (i < tokens->used) {
@@ -572,17 +659,24 @@ Node *parse_body(TokenArray *tokens) {
 
         /* BODY   {statement; statement; ...} */
         if (token->type == TokenType_LCURLY) {
+            _body_count++;
+
             TokenArray *slice = TokenArray_slice(tokens, i+1);
             Node *body = parse_body(slice);
             NodeArray_append(node_array, body);
             TokenArray_free(slice);
+
             i += body->body_tokens+2;
-            wprintf(L"%ls\n", Token_repr(&(tokens->array[i])));
             continue;
         }
 
         /* End of body */
         else if (token->type == TokenType_RCURLY) {
+            if (_body_count < 0) {
+                raise(ErrorType_Syntax, L"Unexpected }", L"<raw>", token->x, token->y);
+            }
+
+            _body_count--;
             break;
         }
 
@@ -597,8 +691,40 @@ Node *parse_body(TokenArray *tokens) {
 
         else if (token->type == TokenType_IDENTIFIER) {
 
+            if (u8isequal(token->data, L"import")) {
+
+                /* IMPORT   import module; */
+                if (tokens->array[i+1].type == TokenType_IDENTIFIER &&
+                    (tokens->array[i+2].type == TokenType_NEXTSTM   ||
+                     tokens->array[i+2].type == TokenType_EOF)) {
+
+                        NodeArray_append(node_array, NodeImport_new(tokens->array[i+1].data));
+                        
+                        i += 2;
+                        continue;
+                     }
+
+                /* IMPORT   import member from module; */
+                else if (tokens->array[i+1].type == TokenType_IDENTIFIER &&
+                         tokens->array[i+2].type == TokenType_IDENTIFIER &&
+                         u8isequal(tokens->array[i+2].data, L"from")     &&
+                         tokens->array[i+3].type == TokenType_IDENTIFIER &&
+                         (tokens->array[i+4].type == TokenType_NEXTSTM   ||
+                          tokens->array[i+4].type == TokenType_EOF)) {
+
+                        NodeArray_append(node_array, NodeImportFrom_new(tokens->array[i+3].data, tokens->array[i+1].data));
+
+                        i += 4;
+                        continue;
+                     }
+
+                else {
+                    raise(ErrorType_Syntax, L"Invalid import scheme", L"<raw>", token->x, token->y);
+                }
+            }
+
             /* DECLERATION   type identifier = expression; */
-            if ((&(tokens->array[i+1]))->type == TokenType_IDENTIFIER &&
+            else if ((&(tokens->array[i+1]))->type == TokenType_IDENTIFIER &&
                 (&(tokens->array[i+2]))->type == TokenType_OPERATOR   &&
                 u8isequal((&(tokens->array[i+2]))->data, L"=")) {
                     
@@ -640,22 +766,49 @@ Node *parse_body(TokenArray *tokens) {
                         // end of the expression
                         int a = 0;
                         while (i+a < tokens->used) {
-                            if ((&(tokens->array[i+1]))->type == TokenType_NEXTSTM ||
-                                (&(tokens->array[i+1]))->type == TokenType_EOF) break;
+                            if ((&(tokens->array[a+i]))->type == TokenType_NEXTSTM ||
+                                (&(tokens->array[a+i]))->type == TokenType_EOF) break;
                             a++;
                         }
                         i += a+1;
                         continue;
                 }
+            
+            /* IF   if expression body */
+            else if (u8isequal(token->data, L"if")) {
+
+                TokenArray *slice = TokenArray_slicet(tokens, i+2);
+                TokenArray_append(slice, Token_new(TokenType_EOF, L""));
+                Node *expr = parse_expr(slice);
+                TokenArray_free(slice);
+
+                i += 2 + _last_token_count;
+
+                TokenArray *slice2 = TokenArray_slice(tokens, i+1);
+                Node *body = parse_body(slice2);
+                TokenArray_free(slice2);
+                i += body->body_tokens+2;
+
+                NodeArray_append(node_array, NodeIf_new(expr, body));
+
+                continue;
+            }
+
+            else {  
+                NodeArray_append(node_array, NodeVar_new(token->data));
+            }
         }
+
+        else {
+            raise(ErrorType_Syntax, L"Statement expected", L"<raw>", token->x, token->y);
+        }
+
     i++;
     }
 
     return NodeBody_new(node_array, i);
 }
 
-
-size_t _token_index = 0;
 
 OpType get_optype(u8char *tokenval) {
     if (u8isequal(tokenval, L"+")) {
@@ -705,6 +858,9 @@ OpType get_optype(u8char *tokenval) {
     }
     else if (u8isequal(tokenval, L">=")) {
         return OpType_GE;
+    }
+    else if (u8isequal(tokenval, L"has")) {
+        return OpType_HAS;
     }
 }
 
@@ -783,8 +939,6 @@ byte expect_token(TokenArray *tokens, TokenType type) {
         return 1;
     }
 }
-
-Node *parse_expr_EXPR(TokenArray *tokens);
 
 Node *parse_expr_FACTOR(TokenArray *tokens) {
     Token *token = current_token(tokens);
@@ -911,7 +1065,8 @@ Node *parse_expr_EXPR(TokenArray *tokens) {
                u8isequal(current_token(tokens)->data, L"..")  ||
                u8isequal(current_token(tokens)->data, L"and") ||
                u8isequal(current_token(tokens)->data, L"or")  ||
-               u8isequal(current_token(tokens)->data, L"xor")) {
+               u8isequal(current_token(tokens)->data, L"xor") ||
+               u8isequal(current_token(tokens)->data, L"has")) {
 
                     OpType optype = get_optype(current_token(tokens)->data);
                     next_token(tokens);
@@ -920,7 +1075,8 @@ Node *parse_expr_EXPR(TokenArray *tokens) {
     }
 
     if (!(current_token(tokens)->type == TokenType_NEXTSTM ||
-        current_token(tokens)->type == TokenType_EOF)) {
+          current_token(tokens)->type == TokenType_EOF     ||
+          current_token(tokens)->type == TokenType_RPAREN)) {
             raise(ErrorType_Syntax, L"Expected ;", L"<raw>", current_token(tokens)->x, current_token(tokens)->y);
         }
 
@@ -934,6 +1090,7 @@ Node *parse_expr_EXPR(TokenArray *tokens) {
 */
 Node *parse_expr(TokenArray *tokens) {
     Node *expr = parse_expr_EXPR(tokens);
+    _last_token_count = _token_index+1;
     _token_index = 0;
     return expr;
 }

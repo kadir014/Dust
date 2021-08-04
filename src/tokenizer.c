@@ -268,8 +268,9 @@ void tokenize_append(Token* token, TokenArray *tokens, int x, int y) {
 
         token->type = TokenType_IDENTIFIER;
         
-        if (u8isequal(t, L"and") == 1 || u8isequal(t, L"or")  == 1 ||
-            u8isequal(t, L"xor") == 1 || u8isequal(t, L"not") == 1) {
+        if (u8isequal(t, L"and") || u8isequal(t, L"or")  ||
+            u8isequal(t, L"xor") || u8isequal(t, L"not") ||
+            u8isequal(t, L"has")) {
                 token->type = TokenType_OPERATOR;
             }
 
@@ -354,9 +355,16 @@ TokenArray *tokenize(u8char *raw){
                         token = Token_new(TokenType_EOF, L"");
                     }
 
+                    if (raw[i+1] == L'=') {
+                        token->data = L"==";
+                        i++;
+                    }
+                    else {
+                        u8char chrstr[2];
+                        token->data = u8join(L"", u8char_to_u8string(&chr, chrstr));
+                    }
+
                     token->type = TokenType_OPERATOR;
-                    u8char chrstr[2];
-                    token->data = u8join(L"", u8char_to_u8string(&chr, chrstr));
                     token->x = x;
                     token->y = y;
                     
@@ -468,6 +476,10 @@ TokenArray *tokenize(u8char *raw){
         x++;
         i++;
     }
+
+    if (wcslen(token->data) > 0) {
+        tokenize_append(token, tokens, x, y);
+    }
     
     // Change last NEXTSTM token to EOF token
     if (tokens->array[tokens->used - 1].type == TokenType_NEXTSTM) {
@@ -476,6 +488,11 @@ TokenArray *tokenize(u8char *raw){
     // Add EOF token if necessary
     else if (tokens->array[tokens->used - 1].type == TokenType_RCURLY) {
         TokenArray_append(tokens, Token_new(TokenType_EOF, L""));
+    }
+    else {
+        raise(ErrorType_Syntax, L"Expected ;", L"<raw>",
+            tokens->array[tokens->used - 1].x,
+            tokens->array[tokens->used - 1].y);
     }
 
     return tokens;

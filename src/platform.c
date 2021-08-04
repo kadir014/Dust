@@ -21,7 +21,7 @@ u8char *get_gcc_version() {
 }
 
 /*
-  Get generic platform name
+  Get generic OS name
 */
 u8char *get_platform() {
 #if defined(_WIN32)

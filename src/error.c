@@ -29,7 +29,7 @@ void raise(ErrorType type, u8char *message, u8char *source, int x, int y) {
 
     wprintf(L"\n%ls %ls%d%ls:%ls%d\n%ls%ls%ls : %ls%ls\n%ls...\n#%d %lsline\n",
             source, ANSI_FG_YELLOW, x, ANSI_END, ANSI_FG_YELLOW, (y+1),
-            ANSI_FG_RED, type_repr, ANSI_FG_DARKGRAY, ANSI_END, message,
+            ANSI_FG_LIGHTRED, type_repr, ANSI_FG_DARKGRAY, ANSI_END, message,
             ANSI_FG_DARKGRAY, (y+1),
             ANSI_END);
             
