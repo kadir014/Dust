@@ -16,7 +16,17 @@
 
 u8char *get_gcc_version();
 
-u8char *get_platform();
+u8char *get_osname();
+
+typedef struct {
+    u8char *name;
+    u8char *kernel;
+    u8char *hostname;
+    u8char *version;
+    u8char *prettyname;
+} Platform;
+
+Platform *get_platform();
 
 
 #endif

@@ -9,6 +9,7 @@
 */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <wchar.h>
 #include "dust/u8string.h"
@@ -18,7 +19,9 @@
 
 
 int main(int argc, char *argv[]) {
-    if (u8isequal(get_platform(), L"Windows")) {
+    Platform *platform = get_platform();
+
+    if (u8isequal(platform->name, L"Windows")) {
         u8winterminal();
     }
 
@@ -37,10 +40,10 @@ int main(int argc, char *argv[]) {
 
         else if (strcmp(argv[1], "version") == 0) {
             wprintf(L"\n"
-                    L"Dust version : 0.0.6\n"
+                    L"Dust version : 0.0.7\n"
                     L"GCC version  : %s\n"
                     L"Platform     : %s\n"
-                    L"\n", get_gcc_version(), get_platform());
+                    L"\n", get_gcc_version(), platform->prettyname);
         }
 
         else if (strcmp(argv[1], "tokenize") == 0) {
@@ -84,6 +87,8 @@ int main(int argc, char *argv[]) {
             wprintf(L"\nUse 'dust help' to see available commands\n");
         }
     }
+
+    free(platform);
 
     return 0;
 }

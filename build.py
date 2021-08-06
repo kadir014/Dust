@@ -8,10 +8,10 @@
 
 """
 
-
 import os
 import platform
 import time
+
 
 # Delete previously compiled binary
 if platform.system() == "Windows": binaryfile = "dust.exe"
@@ -22,8 +22,7 @@ print("Started compiling...\n")
 start = time.time()
 
 if platform.system() == "Windows":
-    #TODO: Add windows flags
-    os.system("gcc -o dust src/cli.c src/u8string.c src/error.c src/platform.c src/tokenizer.c src/parser.c -I./include/")
+    os.system("gcc -o dust src/cli.c src/u8string.c src/error.c src/platform.c src/tokenizer.c src/parser.c -I./include/ -lws2_32")
 else:
     os.system("gcc -o dust src/cli.c src/u8string.c src/error.c src/platform.c src/tokenizer.c src/parser.c -I./include/")
 

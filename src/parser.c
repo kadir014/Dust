@@ -154,6 +154,15 @@ struct _Node {
             struct _Node *if_expr;
             struct _Node *if_body;
         };
+
+        /* ELIF */
+        struct {
+            struct _Node *elif_expr;
+            struct _Node *elif_body;
+        };
+
+        /* ELSE */
+        struct _Node *else_body;
     };
 };
 typedef struct _Node Node;
@@ -329,6 +338,32 @@ Node *NodeIf_new(Node *expression, Node *body) {
     node->type = NodeType_IF;
     node->if_expr = expression;
     node->if_body = body;
+    return node;
+}
+
+/*
+  Create a new Elif (Else If) Node and return its pointer
+
+  Node *expression  ->  Elif statement's condition
+  Node *body        ->  Elif statement's body
+*/
+Node *NodeElif_new(Node *expression, Node *body) {
+    Node *node = (Node *)malloc(sizeof(Node));
+    node->type = NodeType_ELIF;
+    node->elif_expr = expression;
+    node->elif_body = body;
+    return node;
+}
+
+/*
+  Create a new Else Node and return its pointer
+
+  Node *body  ->  Else statement's body
+*/
+Node *NodeElse_new(Node *body) {
+    Node *node = (Node *)malloc(sizeof(Node));
+    node->type = NodeType_ELSE;
+    node->else_body = body;
     return node;
 }
 
@@ -650,6 +685,11 @@ size_t _last_token_count = 0;
 int _body_count = 0;
 
 
+/*
+  Parse a body and return a Node object
+
+  TokenArray *tokens  ->  TokenArray to parse
+*/
 Node *parse_body(TokenArray *tokens) {
     size_t i = 0;
     NodeArray *node_array = NodeArray_new(1);
@@ -777,12 +817,11 @@ Node *parse_body(TokenArray *tokens) {
             /* IF   if expression body */
             else if (u8isequal(token->data, L"if")) {
 
-                TokenArray *slice = TokenArray_slicet(tokens, i+2);
+                TokenArray *slice = TokenArray_slicet(tokens, i+1);
                 TokenArray_append(slice, Token_new(TokenType_EOF, L""));
                 Node *expr = parse_expr(slice);
                 TokenArray_free(slice);
-
-                i += 2 + _last_token_count;
+                i += _last_token_count;
 
                 TokenArray *slice2 = TokenArray_slice(tokens, i+1);
                 Node *body = parse_body(slice2);
@@ -794,13 +833,63 @@ Node *parse_body(TokenArray *tokens) {
                 continue;
             }
 
+            /* ELIF   elif expression body */
+            else if (u8isequal(token->data, L"elif")) {
+
+                TokenArray *slice = TokenArray_slicet(tokens, i+1);
+                TokenArray_append(slice, Token_new(TokenType_EOF, L""));
+                Node *expr = parse_expr(slice);
+                TokenArray_free(slice);
+                i += _last_token_count;
+
+                TokenArray *slice2 = TokenArray_slice(tokens, i+1);
+                Node *body = parse_body(slice2);
+                TokenArray_free(slice2);
+                i += body->body_tokens+2;
+
+                NodeArray_append(node_array, NodeElif_new(expr, body));
+
+                continue;
+            }
+
+            /* ELSE   else body */
+            else if (u8isequal(token->data, L"else")) {
+
+                if (tokens->array[i+1].type != TokenType_LCURLY) {
+                    raise(ErrorType_Syntax, L"Expected {", L"<raw>", tokens->array[i+1].x, tokens->array[i+1].y);
+                }
+
+                TokenArray *slice2 = TokenArray_slice(tokens, i+1);
+                Node *body = parse_body(slice2);
+                TokenArray_free(slice2);
+                i += body->body_tokens+2;
+
+                NodeArray_append(node_array, NodeElse_new(body));
+
+                continue;
+            }
+
             else {  
-                NodeArray_append(node_array, NodeVar_new(token->data));
+                TokenArray *slice = TokenArray_slice(tokens, i);
+                Node *expr = parse_expr(slice);
+                TokenArray_free(slice);
+
+                NodeArray_append(node_array, expr);
+
+                i += _last_token_count;
+                continue;
             }
         }
 
         else {
-            raise(ErrorType_Syntax, L"Statement expected", L"<raw>", token->x, token->y);
+            TokenArray *slice = TokenArray_slice(tokens, i);
+            Node *expr = parse_expr(slice);
+            TokenArray_free(slice);
+
+            NodeArray_append(node_array, expr);
+
+            i += _last_token_count;
+            continue;
         }
 
     i++;
@@ -929,7 +1018,7 @@ void next_token(TokenArray *tokens) {
     _token_index++;
 }
 
-byte expect_token(TokenArray *tokens, TokenType type) {
+char expect_token(TokenArray *tokens, TokenType type) {
     if (tokens->array[_token_index+1].type != type &&
         tokens->array[_token_index+1].type != TokenType_NEXTSTM &&
         tokens->array[_token_index+1].type != TokenType_EOF) {
@@ -962,10 +1051,34 @@ Node *parse_expr_FACTOR(TokenArray *tokens) {
 
     /* Integer/Float literal */
     else if (token->type == TokenType_NUMERIC) {
-        u8char *end;
-        Node *returnnode = NodeInteger_new(wcstol(current_token(tokens)->data, &end, 10));
+        u8char *integer;
+        u8char *intdata = current_token(tokens)->data;
+        Node *integernode = NodeInteger_new(wcstol(current_token(tokens)->data, &integer, 10));
+
         next_token(tokens);
-        return returnnode;
+        if (current_token(tokens)->type == TokenType_PERIOD) {
+            next_token(tokens);
+            
+            if (current_token(tokens)->type != TokenType_NUMERIC) {
+                raise(ErrorType_Syntax, L"Can't subscript integer literal", L"<raw>",
+                current_token(tokens)->x,
+                current_token(tokens)->y);
+            }
+
+            u8char *floating;
+            Node *floatnode = NodeFloat_new(wcstod(u8join(intdata, u8join(L".", current_token(tokens)->data)),
+                                                   &floating));
+            next_token(tokens);
+            free(integer);
+            free(intdata);
+            free(floating);
+            return floatnode;
+        }
+        else {
+            free(integer);
+            free(intdata);
+            return integernode;
+        }
     }
 
     /* Identifier  |  Function/Class call */
@@ -979,7 +1092,7 @@ Node *parse_expr_FACTOR(TokenArray *tokens) {
             if (current_token(tokens)->type == TokenType_RPAREN) {
 
                 // check if next token is valid
-                byte next_valid = 0;
+                char next_valid = 0;
                 next_valid += expect_token(tokens, TokenType_LPAREN);
                 next_valid += expect_token(tokens, TokenType_LSQRB);
                 next_valid += expect_token(tokens, TokenType_OPERATOR);
@@ -1076,7 +1189,8 @@ Node *parse_expr_EXPR(TokenArray *tokens) {
 
     if (!(current_token(tokens)->type == TokenType_NEXTSTM ||
           current_token(tokens)->type == TokenType_EOF     ||
-          current_token(tokens)->type == TokenType_RPAREN)) {
+          current_token(tokens)->type == TokenType_RPAREN  ||
+          current_token(tokens)->type == TokenType_LCURLY)) {
             raise(ErrorType_Syntax, L"Expected ;", L"<raw>", current_token(tokens)->x, current_token(tokens)->y);
         }
 

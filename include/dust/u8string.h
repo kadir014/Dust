@@ -15,7 +15,6 @@
 #include <wchar.h>
 
 typedef wchar_t u8char;
-typedef char byte;
 
 
 void u8winterminal();
@@ -36,19 +35,19 @@ u8char *u8char_to_u8string(u8char *chr, u8char *dest);
 
 int u8find(u8char *str, u8char *substr);
 
-byte u8contains(u8char *str, u8char *substr);
+char u8contains(u8char *str, u8char *substr);
 
-byte u8startswith(u8char *str, u8char *substr);
+char u8startswith(u8char *str, u8char *substr);
 
-byte u8endswith(u8char *str, u8char *substr);
+char u8endswith(u8char *str, u8char *substr);
 
-byte u8isequal(u8char *str1, u8char *str2);
+char u8isequal(u8char *str1, u8char *str2);
 
-byte u8isdigit(u8char *str);
+char u8isdigit(u8char *str);
 
-byte u8isidentifier(u8char *str);
+char u8isidentifier(u8char *str);
 
-byte u8isempty(u8char *str);
+char u8isempty(u8char *str);
 
 u8char *u8fill(u8char *dest, u8char *str, int amount);
 

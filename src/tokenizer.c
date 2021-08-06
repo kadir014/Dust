@@ -47,14 +47,14 @@ typedef struct {
   char *data      ->  String data the Token holds
 */
 Token *Token_new(TokenType type, u8char *data) {
-    Token *t = (Token *)malloc(sizeof(Token));
+    Token *token = (Token *)malloc(sizeof(Token));
     
-    t->type = type;
-    t->data = data;
-    t->x = 0;
-    t->y = 0;
+    token->type = type;
+    token->data = data;
+    token->x = 0;
+    token->y = 0;
 
-    return t;
+    return token;
 }
 
 /*
@@ -134,11 +134,13 @@ typedef struct {
   unsigned short def_size  ->  Initial size of the array
 */
 TokenArray *TokenArray_new(size_t def_size) {
-    TokenArray *a = (TokenArray *)malloc(sizeof(TokenArray));
+    TokenArray *token_array = (TokenArray *)malloc(sizeof(TokenArray));
 
-    a->array = malloc(def_size * sizeof(Token));
-    a->used = 0;
-    a->size = def_size;
+    token_array->array = malloc(def_size * sizeof(Token));
+    token_array->used = 0;
+    token_array->size = def_size;
+
+    return token_array;
 }
 
 /*

@@ -16,7 +16,6 @@
 #include <stdio.h>
 
 typedef wchar_t u8char;
-typedef char byte;
 
 
 #if defined(_WIN32)
@@ -115,7 +114,7 @@ int u8find(u8char *str, u8char *substr) {
     return -1;
 }
 
-byte u8contains(u8char *str, u8char *substr) {
+char u8contains(u8char *str, u8char *substr) {
     if (u8find(str, substr) == -1) {
         return 0;
     }
@@ -124,7 +123,7 @@ byte u8contains(u8char *str, u8char *substr) {
     }
 }
 
-byte u8startswith(u8char *str, u8char *substr) {
+char u8startswith(u8char *str, u8char *substr) {
     if (u8find(str, substr) == 0) {
         return 1;
     } else {
@@ -132,7 +131,7 @@ byte u8startswith(u8char *str, u8char *substr) {
     }
 }
 
-byte u8endswith(u8char *str, u8char *substr) {
+char u8endswith(u8char *str, u8char *substr) {
     int index = u8find(str, substr);
     if (index == -1) {
         return 0;
@@ -145,7 +144,7 @@ byte u8endswith(u8char *str, u8char *substr) {
     }
 }
 
-byte u8isequal(u8char *str1, u8char *str2) {
+char u8isequal(u8char *str1, u8char *str2) {
     if (wcscmp(str1, str2) == 0) {
         return 1;
     }
@@ -154,7 +153,7 @@ byte u8isequal(u8char *str1, u8char *str2) {
     }
 }
 
-byte u8isdigit(u8char *str) {
+char u8isdigit(u8char *str) {
     int i = 0;
 
     while (i < wcslen(str)) {
@@ -169,7 +168,7 @@ byte u8isdigit(u8char *str) {
     return 1;
 }
 
-byte u8isidentifier(u8char *str) {
+char u8isidentifier(u8char *str) {
     int i = 0;
 
     if (str[i] == L'_' || iswalnum(str[i]) != 0) {
@@ -190,7 +189,7 @@ byte u8isidentifier(u8char *str) {
     return 1;
 }
 
-byte u8isempty(u8char *str) {
+char u8isempty(u8char *str) {
     int l = wcslen(str);
     if (l == 0) {
         return 1;

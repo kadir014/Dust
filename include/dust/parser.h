@@ -125,11 +125,17 @@ struct _Node {
             int body_tokens;
         };
 
-        /* IF */
         struct {
             struct _Node *if_expr;
             struct _Node *if_body;
         };
+
+        struct {
+            struct _Node *elif_expr;
+            struct _Node *elif_body;
+        };
+        
+        struct _Node *else_body;
     };
 };
 typedef struct _Node Node;
@@ -159,6 +165,10 @@ Node *NodeImportFrom_new(u8char *module, u8char *member);
 Node *NodeBody_new(NodeArray *node_array, int tokens);
 
 Node *NodeIf_new(Node *expression, Node *body);
+
+Node *NodeElif_new(Node *expression, Node *body);
+
+Node *NodeElse_new(Node *body);
 
 void Node_free(Node *node);
 
