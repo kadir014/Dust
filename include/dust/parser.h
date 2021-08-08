@@ -121,6 +121,11 @@ struct _Node {
         };
 
         struct {
+            struct _Node *subs_node;
+            struct _Node *subs_expr;
+        };
+
+        struct {
             NodeArray *body;
             int body_tokens;
         };

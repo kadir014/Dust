@@ -143,6 +143,18 @@ struct _Node {
             u8char *import_member;
         };
 
+        /* SUBSCRIPT */
+        struct {
+            struct _Node *subs_node;
+            struct _Node *subs_expr;
+        };
+
+        /* CHILD */
+        struct {
+            struct _Node *chld_parent;
+            struct _Node *chld_child;
+        };
+
         /* BODY */
         struct {
             NodeArray *body;
@@ -310,6 +322,34 @@ Node *NodeImportFrom_new(u8char *module, u8char *member) {
     node->type = NodeType_IMPORTF;
     node->import_module = module;
     node->import_member = member;
+    return node;
+}
+
+/*
+  Create a new Subscript (Indexing) Node and return its pointer
+
+  Node *snode  ->  Node that is getting subscripted
+  Node *expr   ->  Subscripting expression
+*/
+Node *NodeSubscript_new(Node *snode, Node *expr) {
+    Node *node = (Node *)malloc(sizeof(Node));
+    node->type = NodeType_SUBSCRIPT;
+    node->subs_node = snode;
+    node->subs_expr = expr;
+    return node;
+}
+
+/*
+  Create a new Child (Dot notation) Node and return its pointer
+
+  Node *parent  ->  Parent node
+  Node *child   ->  Child node
+*/
+Node *NodeChild_new(Node *parent, Node *child) {
+    Node *node = (Node *)malloc(sizeof(Node));
+    node->type = NodeType_CHILD;
+    node->chld_parent = parent;
+    node->chld_child  = child;
     return node;
 }
 
@@ -618,10 +658,34 @@ u8char *Node_repr(Node *node, int ident) {
             }
             break;
 
+        case NodeType_SUBSCRIPT:
+            finalstr = u8join(finalstr, L"subscript:\n");
+            finalstr = u8join(finalstr, u8join(identstr, u8join(L"node: ", Node_repr(node->subs_node, ident+1))));
+            finalstr = u8join(finalstr, u8join(identstr, u8join(L"expr: ", Node_repr(node->subs_expr, ident+1))));
+            break;
+
+        case NodeType_CHILD:
+            finalstr = u8join(finalstr, L"member:\n");
+            finalstr = u8join(finalstr, u8join(identstr, u8join(L"parent: ", Node_repr(node->subs_node, ident+1))));
+            finalstr = u8join(finalstr, u8join(identstr, u8join(L"child: ", Node_repr(node->subs_expr, ident+1))));
+            break;
+
         case NodeType_IF:
             finalstr = u8join(finalstr, L"if:\n");
             finalstr = u8join(finalstr, u8join(identstr, L"condition:\n"));
             finalstr = u8join(finalstr, u8join(identstr, Node_repr(node->if_expr, ident+1)));
+            finalstr = u8join(finalstr, u8join(identstr, Node_repr(node->if_body, ident+1)));
+            break;
+
+        case NodeType_ELIF:
+            finalstr = u8join(finalstr, L"elif:\n");
+            finalstr = u8join(finalstr, u8join(identstr, L"condition:\n"));
+            finalstr = u8join(finalstr, u8join(identstr, Node_repr(node->if_expr, ident+1)));
+            finalstr = u8join(finalstr, u8join(identstr, Node_repr(node->if_body, ident+1)));
+            break;
+
+        case NodeType_ELSE:
+            finalstr = u8join(finalstr, L"else:\n");
             finalstr = u8join(finalstr, u8join(identstr, Node_repr(node->if_body, ident+1)));
             break;
     }
@@ -641,6 +705,8 @@ NodeArray *NodeArray_new(size_t def_size) {
     node_array->array = malloc(def_size * sizeof(Node));
     node_array->used = 0;
     node_array->size = def_size;
+
+    return node_array;
 }
 
 /*
@@ -677,6 +743,14 @@ DeclType get_decltype(u8char *tokenval);
 Node *parse_expr(TokenArray *tokens);
 
 Node *parse_expr_EXPR(TokenArray *tokens);
+
+Node *parse_expr_FACTOR(TokenArray *tokens);
+
+Node *parse_child(TokenArray *tokens, Node *node);
+
+Node *parse_subscript(TokenArray *tokens, Node *node);
+
+Node *parse_call(TokenArray *tokens, Node *node);
 
 Token *current_token(TokenArray *tokens);
 
@@ -725,6 +799,9 @@ Node *parse_body(TokenArray *tokens) {
         }
 
         else if (token->type == TokenType_NEXTSTM) {
+            if (tokens->array[i-1].type == TokenType_NEXTSTM) {
+                raise(ErrorType_Syntax, L"Statement expected before ;", L"<raw>", token->x, token->y);
+            }
             i++;
             continue;
         }
@@ -859,9 +936,9 @@ Node *parse_body(TokenArray *tokens) {
                     raise(ErrorType_Syntax, L"Expected {", L"<raw>", tokens->array[i+1].x, tokens->array[i+1].y);
                 }
 
-                TokenArray *slice2 = TokenArray_slice(tokens, i+1);
-                Node *body = parse_body(slice2);
-                TokenArray_free(slice2);
+                TokenArray *slice = TokenArray_slice(tokens, i+1);
+                Node *body = parse_body(slice);
+                TokenArray_free(slice);
                 i += body->body_tokens+2;
 
                 NodeArray_append(node_array, NodeElse_new(body));
@@ -1029,6 +1106,19 @@ char expect_token(TokenArray *tokens, TokenType type) {
     }
 }
 
+Node *parse_child(TokenArray *tokens, Node *node) {
+    if (current_token(tokens)->type == TokenType_PERIOD) {
+        next_token(tokens);
+
+        Node *child = parse_expr_FACTOR(tokens);
+
+        return NodeChild_new(node, child);
+    }
+    else {
+        return node;
+    }
+}
+
 Node *parse_expr_FACTOR(TokenArray *tokens) {
     Token *token = current_token(tokens);
 
@@ -1044,9 +1134,33 @@ Node *parse_expr_FACTOR(TokenArray *tokens) {
 
     /* String literal */
     else if (token->type == TokenType_STRING) {
-        Node *returnnode = NodeString_new(current_token(tokens)->data);
         next_token(tokens);
-        return returnnode;
+        
+        if (current_token(tokens)->type == TokenType_LSQRB) {
+            next_token(tokens);
+
+            /* Instant close [] */
+            if (current_token(tokens)->type == TokenType_RSQRB) {
+                raise(ErrorType_Syntax, L"Subscripting with nothing", L"<raw>",
+                      current_token(tokens)->x,
+                      current_token(tokens)->y);
+            }
+
+            Node *expr = parse_expr_EXPR(tokens);
+
+            if (current_token(tokens)->type == TokenType_RSQRB) {
+                next_token(tokens);
+                return parse_child(tokens, NodeSubscript_new(NodeString_new(token->data), expr));
+            }
+            else {
+                raise(ErrorType_Syntax, L"Expected ]", L"<raw>",
+                      current_token(tokens)->x,
+                      current_token(tokens)->y);
+            }
+        }
+        else {
+            return parse_child(tokens, NodeString_new(token->data));
+        }
     }
 
     /* Integer/Float literal */
@@ -1190,7 +1304,8 @@ Node *parse_expr_EXPR(TokenArray *tokens) {
     if (!(current_token(tokens)->type == TokenType_NEXTSTM ||
           current_token(tokens)->type == TokenType_EOF     ||
           current_token(tokens)->type == TokenType_RPAREN  ||
-          current_token(tokens)->type == TokenType_LCURLY)) {
+          current_token(tokens)->type == TokenType_LCURLY  ||
+          current_token(tokens)->type == TokenType_RSQRB)) {
             raise(ErrorType_Syntax, L"Expected ;", L"<raw>", current_token(tokens)->x, current_token(tokens)->y);
         }
 

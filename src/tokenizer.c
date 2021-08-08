@@ -291,6 +291,7 @@ void tokenize_append(Token* token, TokenArray *tokens, int x, int y) {
 */
 TokenArray *tokenize(u8char *raw){
     TokenArray *tokens = TokenArray_new(1);
+    if (wcslen(raw) == 0) return tokens;
     Token *token = Token_new(TokenType_EOF, L"");
 
     int x = 0;
@@ -506,20 +507,21 @@ TokenArray *tokenize(u8char *raw){
   char *filepath  ->  Path of the file to tokenize
 */
 TokenArray *tokenize_file(char *filepath) {
-    u8char *buffer;
+    u8char *buffer = L"";
     long length;
     FILE *f = fopen(filepath, "r,ccs=UTF-8");
-    fwide(f, 1);
 
     if (f) {
         fseek(f, 0, SEEK_END);
         length = ftell(f);
         fseek(f, 0, SEEK_SET);
-        buffer = malloc(length*sizeof(u8char));
 
         if (buffer) {
-            //fread(buffer, sizeof(u8char), length, f);
-            while (fgetws(buffer, length, f) != NULL) {}
+            u8char wc;
+            while ((wc = fgetwc(f)) != WEOF) {
+                u8char wcs[2] = {wc, L'\n'};
+                buffer = u8join(buffer, wcs);
+            }
         }
 
         fclose(f);
