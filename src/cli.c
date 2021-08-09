@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
 
         else if (strcmp(argv[1], "version") == 0) {
             wprintf(L"\n"
-                    L"Dust version : 0.0.8\n"
+                    L"Dust version : 0.0.9\n"
                     L"GCC version  : %s\n"
                     L"Platform     : %s\n"
                     L"\n", get_gcc_version(), platform->prettyname);

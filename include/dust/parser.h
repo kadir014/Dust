@@ -27,6 +27,8 @@ typedef enum {
     NodeType_CHILD,
     NodeType_SUBSCRIPT,
     NodeType_CALL,
+    NodeType_FUNCBASE,
+    NodeType_ENUM,
     NodeType_BODY,
     NodeType_IF,
     NodeType_ELIF,
@@ -107,7 +109,9 @@ struct _Node {
             struct _Node *assign_expr;
         };
 
-        u8char *call_base;
+        struct _Node *call_base;
+
+        u8char *func_base;
 
         struct {
             OpType bin_optype;
@@ -121,8 +125,23 @@ struct _Node {
         };
 
         struct {
+            u8char *import_module;
+            u8char *import_member;
+        };
+
+        struct {
             struct _Node *subs_node;
             struct _Node *subs_expr;
+        };
+
+        struct {
+            struct _Node *chld_parent;
+            struct _Node *chld_child;
+        };
+
+        struct {
+            u8char *enum_name;
+            struct _Node *enum_body;
         };
 
         struct {
@@ -139,7 +158,7 @@ struct _Node {
             struct _Node *elif_expr;
             struct _Node *elif_body;
         };
-        
+
         struct _Node *else_body;
     };
 };
@@ -151,7 +170,9 @@ Node *NodeFloat_new(double floating);
 
 Node *NodeString_new(u8char *str);
 
-Node *NodeCall_new(u8char *call_base);
+Node *NodeCall_new(Node *call_base);
+
+Node *NodeFuncBase_new(u8char *func_base);
 
 Node *NodeVar_new(u8char *variable);
 
@@ -166,6 +187,12 @@ Node *NodeUnaryOp_new(OpType op, Node *right);
 Node *NodeImport_new(u8char *module);
 
 Node *NodeImportFrom_new(u8char *module, u8char *member);
+
+Node *NodeSubscript_new(Node *snode, Node *expr);
+
+Node *NodeChild_new(Node *parent, Node *child);
+
+Node *NodeEnum_new(u8char *name, Node *body);
 
 Node *NodeBody_new(NodeArray *node_array, int tokens);
 

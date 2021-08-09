@@ -32,6 +32,8 @@ typedef enum {
     NodeType_CHILD,
     NodeType_SUBSCRIPT,
     NodeType_CALL,
+    NodeType_FUNCBASE,
+    NodeType_ENUM,
     NodeType_BODY,
     NodeType_IF,
     NodeType_ELIF,
@@ -122,7 +124,10 @@ struct _Node {
         };
 
         /* FUNCTION/CLASS CALL */
-        u8char *call_base;
+        struct _Node *call_base;
+
+        /* FUNCTION BASE */
+        u8char *func_base;
 
         /* BINARY OPERATOR */
         struct {
@@ -153,6 +158,12 @@ struct _Node {
         struct {
             struct _Node *chld_parent;
             struct _Node *chld_child;
+        };
+
+        /* ENUMERATION */
+        struct {
+            u8char *enum_name;
+            struct _Node *enum_body;
         };
 
         /* BODY */
@@ -220,10 +231,22 @@ Node *NodeString_new(u8char *str) {
 
   u8char *call_base  ->  Value of node
 */
-Node *NodeCall_new(u8char *call_base) {
+Node *NodeCall_new(Node *call_base) {
     Node *node = (Node *)malloc(sizeof(Node));
     node->type = NodeType_CALL;
     node->call_base = call_base;
+    return node;
+}
+
+/*
+  Create a new Function Base Node and return its pointer
+
+  u8char *func_base  ->  Function base
+*/
+Node *NodeFuncBase_new(u8char *func_base) {
+    Node *node = (Node *)malloc(sizeof(Node));
+    node->type = NodeType_FUNCBASE;
+    node->func_base = func_base;
     return node;
 }
 
@@ -354,6 +377,20 @@ Node *NodeChild_new(Node *parent, Node *child) {
 }
 
 /*
+  Create a new Enumeration Node and return its pointer
+
+  Node *name  ->  Identifier of enumeration
+  Node *body  ->  Body of enumeration
+*/
+Node *NodeEnum_new(u8char *name, Node *body) {
+    Node *node = (Node *)malloc(sizeof(Node));
+    node->type = NodeType_ENUM;
+    node->enum_name = name;
+    node->enum_body = body;
+    return node;
+}
+
+/*
   Create a new Body Node and return its pointer
 
   NodeArray *node_array  ->  Array of statement nodes
@@ -464,8 +501,12 @@ u8char *Node_repr(Node *node, int ident) {
 
         case NodeType_CALL:
             finalstr = u8join(finalstr, L"call:\n");
-            finalstr = u8join(finalstr, u8join(identstr, u8join(L"base: ", u8join(node->call_base, L"\n"))));
+            finalstr = u8join(finalstr, u8join(identstr, Node_repr(node->call_base, ident+1)));
             finalstr = u8join(finalstr, u8join(identstr, L"args:\n"));
+            break;
+
+        case NodeType_FUNCBASE:
+            finalstr = u8join(finalstr, u8join(L"function: ", u8join(node->func_base, L"\n")));
             break;
 
         case NodeType_DECL:
@@ -648,6 +689,12 @@ u8char *Node_repr(Node *node, int ident) {
             finalstr = u8join(finalstr, u8join(identstr, u8join(L"    ", u8join(L"module: ", u8join(node->import_module, L"\n")))));
             break;
 
+        case NodeType_ENUM:
+            finalstr = u8join(finalstr, L"enum:\n");
+            finalstr = u8join(finalstr, u8join(identstr, u8join(L"name: ", u8join(node->enum_name, L"\n"))));
+            finalstr = u8join(finalstr, u8join(identstr, Node_repr(node->enum_body, ident+1)));
+            break;
+
         case NodeType_BODY:
             finalstr = u8join(finalstr, L"body:\n");
             
@@ -757,6 +804,84 @@ Token *current_token(TokenArray *tokens);
 size_t _token_index = 0;
 size_t _last_token_count = 0;
 int _body_count = 0;
+
+
+/*
+  Parse an enumeration body and return a Node object
+
+  TokenArray *tokens  ->  TokenArray to parse
+*/
+Node *parse_enum(TokenArray *tokens) {
+    size_t i = 0;
+    NodeArray *node_array = NodeArray_new(1);
+
+    while (i < tokens->used) {
+        Token *token = &(tokens->array[i]);
+
+        if (token->type == TokenType_RCURLY) {
+            break;
+        }
+
+        else if (token->type == TokenType_EOF) {
+            break;
+        }
+
+        else if (token->type == TokenType_NEXTSTM) {
+            raise(ErrorType_Syntax, L"Unexpected symbol ; in enumeration", L"<raw>", token->x, token->y);
+        }
+
+        else if (token->type == TokenType_COMMA) {
+            if (tokens->array[i-1].type == TokenType_COMMA) {
+                raise(ErrorType_Syntax, L"Statement expected before ,", L"<raw>", token->x, token->y);
+            }
+            i++;
+            continue;
+        }
+
+        else if (token->type == TokenType_IDENTIFIER) {
+
+            /* ASSIGNMENT   identifier = expression, */
+            if ((&(tokens->array[i]))->type == TokenType_IDENTIFIER &&
+               (&(tokens->array[i+1]))->type == TokenType_OPERATOR &&
+                    u8isequal((&(tokens->array[i+1]))->data, L"=")) {
+                
+                    u8char *var = (&(tokens->array[i]))->data;
+
+                    TokenArray *slice = TokenArray_slice(tokens, i+2);
+                    TokenArray_append(slice, Token_new(TokenType_EOF, L""));
+                    Node *expr = parse_expr(slice);
+                    TokenArray_free(slice);
+
+                    NodeArray_append(node_array, NodeAssign_new(var, expr));
+
+                    // end of the expression
+                    // int a = 0;
+                    // while (i+a < tokens->used) {
+                    //     if ((&(tokens->array[a+i]))->type == TokenType_NEXTSTM ||
+                    //         (&(tokens->array[a+i]))->type == TokenType_EOF) break;
+                    //     a++;
+                    // }
+                    i += _last_token_count+1;
+                    continue;
+            }
+            
+            else if (tokens->array[i+1].type == TokenType_COMMA ||
+                     tokens->array[i+1].type == TokenType_RCURLY) {
+                NodeArray_append(node_array, NodeVar_new(token->data));
+                i += 2;
+                continue;
+            }
+        }
+
+        else {
+            raise(ErrorType_Syntax, L"Unexpected field in enumeration", L"<raw>", token->x, token->y);
+        }
+
+        i++;
+    }
+
+    return NodeBody_new(node_array, i);
+}
 
 
 /*
@@ -890,6 +1015,42 @@ Node *parse_body(TokenArray *tokens) {
                         i += a+1;
                         continue;
                 }
+
+            /* ENUM   enum {identifier|assignment, ...} */
+            else if (u8isequal(token->data, L"enum")) {
+                u8char *name;
+                if (tokens->array[i+1].type == TokenType_IDENTIFIER) {
+                    name = tokens->array[i+1].data;
+                }
+                else {
+                    raise(ErrorType_Syntax, L"Identifier expected after enum", L"<raw>",
+                          tokens->array[i+1].x,
+                          tokens->array[i+1].y);
+                }
+
+                if (!(tokens->array[i+2].type == TokenType_LCURLY)) {
+                    raise(ErrorType_Syntax, L"Expected }", L"<raw>",
+                          tokens->array[i+2].x,
+                          tokens->array[i+2].y);
+                }
+
+                TokenArray *slice = TokenArray_slice(tokens, i+3);
+                Node *body = parse_enum(slice);
+                TokenArray_free(slice);
+                i += body->body_tokens+4;
+
+                if (!(tokens->array[i].type == TokenType_NEXTSTM ||
+                      tokens->array[i].type == TokenType_EOF)) {
+
+                    raise(ErrorType_Syntax, L"Expected ;", L"<raw>",
+                          tokens->array[i+2].x,
+                          tokens->array[i+2].y);
+                }
+
+                NodeArray_append(node_array, NodeEnum_new(name, body));
+
+                continue;
+            }
             
             /* IF   if expression body */
             else if (u8isequal(token->data, L"if")) {
@@ -1119,6 +1280,64 @@ Node *parse_child(TokenArray *tokens, Node *node) {
     }
 }
 
+Node *parse_subscript(TokenArray *tokens, Node *node) {
+    if (current_token(tokens)->type == TokenType_LSQRB) {
+        next_token(tokens);
+
+        /* Instant close [] */
+        if (current_token(tokens)->type == TokenType_RSQRB) {
+            raise(ErrorType_Syntax, L"Subscripting with nothing", L"<raw>",
+                    current_token(tokens)->x,
+                    current_token(tokens)->y);
+        }
+
+        Node *expr = parse_expr_EXPR(tokens);
+
+        if (current_token(tokens)->type == TokenType_RSQRB) {
+            next_token(tokens);
+            return parse_subscript(tokens,
+                   parse_call(tokens,
+                   parse_child(tokens, NodeSubscript_new(node, expr))));
+        }
+        else {
+            raise(ErrorType_Syntax, L"Expected ]", L"<raw>",
+                    current_token(tokens)->x,
+                    current_token(tokens)->y);
+        }
+    }
+
+    return node;
+}
+
+Node *parse_call(TokenArray *tokens, Node *node) {
+    if (current_token(tokens)->type == TokenType_LPAREN) {
+        next_token(tokens);
+
+        /* Instant close () */
+        if (current_token(tokens)->type == TokenType_RPAREN) {
+
+            // check if next token is valid
+            char next_valid = 0;
+            next_valid += expect_token(tokens, TokenType_LPAREN);
+            next_valid += expect_token(tokens, TokenType_LSQRB);
+            next_valid += expect_token(tokens, TokenType_OPERATOR);
+            next_valid += expect_token(tokens, TokenType_PERIOD);
+            if (!next_valid) {
+                raise(ErrorType_Syntax, u8join(L"Unexpected symbol '", u8join(tokens->array[_token_index+1].data, L"' after function call")), L"<raw>", 0, 0);
+            }
+
+            next_token(tokens);
+            return parse_call(tokens,
+                   parse_subscript(tokens,
+                   parse_child(tokens, NodeCall_new(node))));
+        }
+
+        //TODO: check args
+    }
+
+    return node;
+}
+
 Node *parse_expr_FACTOR(TokenArray *tokens) {
     Token *token = current_token(tokens);
 
@@ -1150,7 +1369,8 @@ Node *parse_expr_FACTOR(TokenArray *tokens) {
 
             if (current_token(tokens)->type == TokenType_RSQRB) {
                 next_token(tokens);
-                return parse_child(tokens, NodeSubscript_new(NodeString_new(token->data), expr));
+                return parse_subscript(tokens,
+                       parse_child(tokens, NodeSubscript_new(NodeString_new(token->data), expr)));
             }
             else {
                 raise(ErrorType_Syntax, L"Expected ]", L"<raw>",
@@ -1159,7 +1379,8 @@ Node *parse_expr_FACTOR(TokenArray *tokens) {
             }
         }
         else {
-            return parse_child(tokens, NodeString_new(token->data));
+            return parse_subscript(tokens,
+                   parse_child(tokens, NodeString_new(token->data)));
         }
     }
 
@@ -1210,18 +1431,22 @@ Node *parse_expr_FACTOR(TokenArray *tokens) {
                 next_valid += expect_token(tokens, TokenType_LPAREN);
                 next_valid += expect_token(tokens, TokenType_LSQRB);
                 next_valid += expect_token(tokens, TokenType_OPERATOR);
+                next_valid += expect_token(tokens, TokenType_PERIOD);
                 if (!next_valid) {
                     raise(ErrorType_Syntax, u8join(L"Unexpected symbol '", u8join(tokens->array[_token_index+1].data, L"' after function call")), L"<raw>", 0, 0);
                 }
 
                 next_token(tokens);
-                return NodeCall_new(token->data);
+                return parse_call(tokens,
+                       parse_subscript(tokens,
+                       parse_child(tokens, NodeCall_new(NodeFuncBase_new(token->data)))));
             }
 
             // TODO: Check arguments
         }
         else {
-            return NodeVar_new(token->data);
+            return parse_subscript(tokens,
+                   parse_child(tokens, NodeVar_new(token->data)));
         }
     }
 
@@ -1238,10 +1463,10 @@ Node *parse_expr_FACTOR(TokenArray *tokens) {
 
         if (current_token(tokens)->type == TokenType_RPAREN) {
             next_token(tokens);
-            return expr;
+            return parse_subscript(tokens, expr);
         }
         else {
-            raise(ErrorType_Syntax, L"Closing paranthesis expected", L"<raw>", current_token(tokens)->x, current_token(tokens)->y);
+            raise(ErrorType_Syntax, L"Expected )", L"<raw>", current_token(tokens)->x, current_token(tokens)->y);
         }
     }
 }
@@ -1305,6 +1530,8 @@ Node *parse_expr_EXPR(TokenArray *tokens) {
           current_token(tokens)->type == TokenType_EOF     ||
           current_token(tokens)->type == TokenType_RPAREN  ||
           current_token(tokens)->type == TokenType_LCURLY  ||
+          current_token(tokens)->type == TokenType_RCURLY  ||
+          current_token(tokens)->type == TokenType_COMMA   ||
           current_token(tokens)->type == TokenType_RSQRB)) {
             raise(ErrorType_Syntax, L"Expected ;", L"<raw>", current_token(tokens)->x, current_token(tokens)->y);
         }
