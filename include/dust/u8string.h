@@ -51,5 +51,7 @@ char u8isempty(u8char *str);
 
 u8char *u8fill(u8char *dest, u8char *str, int amount);
 
+u8char *u8replace(u8char *str, u8char *old, u8char *new);
+
 
 #endif

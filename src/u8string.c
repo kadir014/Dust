@@ -214,3 +214,33 @@ u8char *u8fill(u8char *dest, u8char *str, int amount) {
 
     return dest;
 }
+
+u8char *u8replace(u8char *str, u8char *old, u8char *new) {
+    u8char *result;
+    int i, cnt = 0;
+    int newlen = wcslen(new);
+    int oldlen = wcslen(old);
+  
+    for (i = 0; str[i] != '\0'; i++) {
+        if (wcsstr(&str[i], old) == &str[i]) {
+            cnt++;
+            i += oldlen - 1;
+        }
+    }
+  
+    result = (u8char *)malloc((i + cnt * (newlen - oldlen) + 1)*sizeof(u8char));
+  
+    i = 0;
+    while (*str) {
+        if (wcsstr(str, old) == str) {
+            wcscpy(&result[i], new);
+            i += newlen;
+            str += oldlen;
+        }
+        else
+            result[i++] = *str++;
+    }
+  
+    result[i] = '\0';
+    return result;
+}

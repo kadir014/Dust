@@ -227,9 +227,9 @@ u8char *TokenArray_repr(TokenArray *token_array) {
   Helper function to tokenize
 */
 void tokenize_append(Token* token, TokenArray *tokens, int x, int y) {
-    u8char *t = u8strip(token->data);
+    u8char *t = u8replace(u8strip(token->data), L"\n", L"");
 
-    if (u8isdigit(t) == 1) {
+    if (u8isdigit(t)) {
         token->type = TokenType_NUMERIC;
         token->data = t;
         token->x = x;
@@ -237,8 +237,8 @@ void tokenize_append(Token* token, TokenArray *tokens, int x, int y) {
         TokenArray_append(tokens, token);
     }
 
-    else if (u8isequal(t, L"(") == 1 || u8isequal(t, L")") == 1 || u8isequal(t, L"[") == 1 ||
-             u8isequal(t, L"]") == 1 || u8isequal(t, L"{") == 1 || u8isequal(t, L"}") == 1) {
+    else if (u8isequal(t, L"(") || u8isequal(t, L")") || u8isequal(t, L"[") ||
+             u8isequal(t, L"]") || u8isequal(t, L"{") || u8isequal(t, L"}")) {
                 
                 switch (t[0]) {
                         case L'(': token->type = TokenType_LPAREN; break;
@@ -291,6 +291,7 @@ void tokenize_append(Token* token, TokenArray *tokens, int x, int y) {
 */
 TokenArray *tokenize(u8char *raw){
     TokenArray *tokens = TokenArray_new(1);
+    raw = u8replace(u8strip(raw), L"\n", L"");
     if (wcslen(raw) == 0) return tokens;
     Token *token = Token_new(TokenType_EOF, L"");
 
@@ -507,27 +508,17 @@ TokenArray *tokenize(u8char *raw){
   char *filepath  ->  Path of the file to tokenize
 */
 TokenArray *tokenize_file(char *filepath) {
-    u8char *buffer = L"";
-    long length;
     FILE *f = fopen(filepath, "r,ccs=UTF-8");
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
 
-    if (f) {
-        fseek(f, 0, SEEK_END);
-        length = ftell(f);
-        fseek(f, 0, SEEK_SET);
-
-        if (buffer) {
-            u8char wc;
-            while ((wc = fgetwc(f)) != WEOF) {
-                u8char wcs[2] = {wc, L'\n'};
-                buffer = u8join(buffer, wcs);
-            }
-        }
-
-        fclose(f);
-    }
+    u8char *buffer = malloc((fsize + 1)*sizeof(u8char));
+    fread(buffer, sizeof(u8char), fsize, f);
+    fclose(f);
 
     if (buffer) {
+        buffer[fsize] = L'\0';
         TokenArray *token_array = tokenize(buffer);
         free(buffer);
         return token_array;

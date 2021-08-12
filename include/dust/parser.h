@@ -109,7 +109,10 @@ struct _Node {
             struct _Node *assign_expr;
         };
 
-        struct _Node *call_base;
+        struct {
+            struct _Node *call_base;
+            NodeArray *call_args;
+        };
 
         u8char *func_base;
 

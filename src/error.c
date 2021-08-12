@@ -19,7 +19,9 @@ typedef enum {
 } ErrorType;
 
 
-void raise(ErrorType type, u8char *message, u8char *source, int x, int y) {
+int ERROR_ANSI = 1;
+
+void raise_ansi(ErrorType type, u8char *message, u8char *source, int x, int y) {
     u8char *type_repr;
     switch (type) {
         case ErrorType_Syntax:
@@ -34,4 +36,30 @@ void raise(ErrorType type, u8char *message, u8char *source, int x, int y) {
             ANSI_END);
             
     exit(1);
+}
+
+void raise_noansi(ErrorType type, u8char *message, u8char *source, int x, int y) {
+    u8char *type_repr;
+    switch (type) {
+        case ErrorType_Syntax:
+            type_repr = L"SyntaxError";
+            break;
+    }
+
+    wprintf(L"\n%ls %d:%d\n%ls : %ls\n...\n#%d line\n",
+            source, x, (y+1), type_repr, message, (y+1));
+            
+    exit(1);
+}
+
+void raise(ErrorType type, u8char *message, u8char *source, int x, int y) {
+    switch (ERROR_ANSI) {
+        case 1:
+            raise_ansi(type, message, source, x, y);
+            break;
+
+        case 0:
+            raise_noansi(type, message, source, x, y);
+            break;
+    }
 }

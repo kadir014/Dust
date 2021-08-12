@@ -13,6 +13,7 @@
 #include <string.h>
 #include <wchar.h>
 #include "dust/u8string.h"
+#include "dust/error.h"
 #include "dust/platform.h"
 #include "dust/tokenizer.h"
 #include "dust/parser.h"
@@ -40,7 +41,7 @@ int main(int argc, char *argv[]) {
 
         else if (strcmp(argv[1], "version") == 0) {
             wprintf(L"\n"
-                    L"Dust version : 0.0.9\n"
+                    L"Dust version : 0.0.10\n"
                     L"GCC version  : %s\n"
                     L"Platform     : %s\n"
                     L"\n", get_gcc_version(), platform->prettyname);
@@ -49,7 +50,11 @@ int main(int argc, char *argv[]) {
         else if (strcmp(argv[1], "tokenize") == 0) {
             TokenArray *tokens = TokenArray_new(1);
 
-            if (argc == 4 && (strcmp(argv[3], "-fp")) == 0) {
+            if (argc == 4 && strcmp(argv[3], "-nocolor") == 0) {
+                ERROR_ANSI = 0;
+            }
+
+            if (argc == 4 && strcmp(argv[3], "-fp") == 0) {
                 tokens = tokenize_file(argv[2]);
             }
             else {
@@ -65,6 +70,10 @@ int main(int argc, char *argv[]) {
 
         else if (strcmp(argv[1], "parse") == 0) {
             TokenArray *tokens = TokenArray_new(1);
+
+            if (argc == 4 && (strcmp(argv[3], "-nocolor")) == 0) {
+                ERROR_ANSI = 0;
+            }
 
             if (argc == 4 && (strcmp(argv[3], "-fp")) == 0) {
                 tokens = tokenize_file(argv[2]);

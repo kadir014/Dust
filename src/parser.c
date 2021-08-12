@@ -124,7 +124,10 @@ struct _Node {
         };
 
         /* FUNCTION/CLASS CALL */
-        struct _Node *call_base;
+        struct {
+            struct _Node *call_base;
+            NodeArray *call_args;
+        };
 
         /* FUNCTION BASE */
         u8char *func_base;
@@ -230,11 +233,13 @@ Node *NodeString_new(u8char *str) {
   Create a new Function/Class Call Node and return its pointer
 
   u8char *call_base  ->  Value of node
+  u8char *call_args  ->  Argument array (might be NULL)
 */
-Node *NodeCall_new(Node *call_base) {
+Node *NodeCall_new(Node *call_base, NodeArray *call_args) {
     Node *node = (Node *)malloc(sizeof(Node));
     node->type = NodeType_CALL;
     node->call_base = call_base;
+    node->call_args = call_args;
     return node;
 }
 
@@ -502,7 +507,17 @@ u8char *Node_repr(Node *node, int ident) {
         case NodeType_CALL:
             finalstr = u8join(finalstr, L"call:\n");
             finalstr = u8join(finalstr, u8join(identstr, Node_repr(node->call_base, ident+1)));
-            finalstr = u8join(finalstr, u8join(identstr, L"args:\n"));
+            if (node->call_args) {
+                finalstr = u8join(finalstr, u8join(identstr, L"args:\n"));
+                int i = 0;
+                while (i < node->call_args->used) {
+                    finalstr = u8join(finalstr, u8join(u8join(identstr, L"    "), Node_repr(&(node->call_args->array[i]), ident+2)));
+                    i++;
+                }
+            }
+            else {
+                finalstr = u8join(finalstr, u8join(identstr, L"args: no args\n"));
+            }
             break;
 
         case NodeType_FUNCBASE:
@@ -854,13 +869,6 @@ Node *parse_enum(TokenArray *tokens) {
 
                     NodeArray_append(node_array, NodeAssign_new(var, expr));
 
-                    // end of the expression
-                    // int a = 0;
-                    // while (i+a < tokens->used) {
-                    //     if ((&(tokens->array[a+i]))->type == TokenType_NEXTSTM ||
-                    //         (&(tokens->array[a+i]))->type == TokenType_EOF) break;
-                    //     a++;
-                    // }
                     i += _last_token_count+1;
                     continue;
             }
@@ -1329,10 +1337,30 @@ Node *parse_call(TokenArray *tokens, Node *node) {
             next_token(tokens);
             return parse_call(tokens,
                    parse_subscript(tokens,
-                   parse_child(tokens, NodeCall_new(node))));
+                   parse_child(tokens, NodeCall_new(node, NULL))));
         }
 
-        //TODO: check args
+        /* Arguments (arg1, arg2, ...) */
+        NodeArray *args = NodeArray_new(1);
+        
+        NodeArray_append(args, parse_expr_EXPR(tokens));
+
+        while (current_token(tokens)->type == TokenType_COMMA) {
+            next_token(tokens);
+            NodeArray_append(args, parse_expr_EXPR(tokens));
+        }
+
+        if (current_token(tokens)->type == TokenType_RPAREN) {
+            next_token(tokens);
+            return parse_call(tokens,
+                    parse_subscript(tokens,
+                    parse_child(tokens, NodeCall_new(node, args))));
+        }
+        else {
+            raise(ErrorType_Syntax, L"Expected ;", L"<raw>",
+                    current_token(tokens)->x,
+                    current_token(tokens)->y);
+        }
     }
 
     return node;
@@ -1439,10 +1467,30 @@ Node *parse_expr_FACTOR(TokenArray *tokens) {
                 next_token(tokens);
                 return parse_call(tokens,
                        parse_subscript(tokens,
-                       parse_child(tokens, NodeCall_new(NodeFuncBase_new(token->data)))));
+                       parse_child(tokens, NodeCall_new(NodeFuncBase_new(token->data), NULL))));
             }
 
-            // TODO: Check arguments
+            /* Arguments (arg1, arg2, ...) */
+            NodeArray *args = NodeArray_new(1);
+            
+            NodeArray_append(args, parse_expr_EXPR(tokens));
+
+            while (current_token(tokens)->type == TokenType_COMMA) {
+                next_token(tokens);
+                NodeArray_append(args, parse_expr_EXPR(tokens));
+            }
+
+            if (current_token(tokens)->type == TokenType_RPAREN) {
+                next_token(tokens);
+                return parse_call(tokens,
+                       parse_subscript(tokens,
+                       parse_child(tokens, NodeCall_new(NodeFuncBase_new(token->data), args))));
+            }
+            else {
+                raise(ErrorType_Syntax, L"Expected ;", L"<raw>",
+                      current_token(tokens)->x,
+                      current_token(tokens)->y);
+            }
         }
         else {
             return parse_subscript(tokens,
