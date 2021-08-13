@@ -21,14 +21,18 @@ type identifier = expression;
 identifier = expression;
 
 /* Indexing (Subscripting) */
-expression[integer_expression]
+expression[expression];
+
+/* Function call */
+expression();
+expression(expression, ...);
 
 /* Importing */
 import module;
        ^ module.submodule...
 
 import member from module;
-                   ^ module.submodule.subsubmodule...
+                   ^ module.submodule...
 
 /* If - Elif - Else */
 if expression {statement; ...}
@@ -38,9 +42,9 @@ elif expression {statement; ...}
 else {statement; ...}
 
 /* Loops */
-repeat integer_expression {statement; ...}
+repeat expression {statement; ...}
 
-for identifier in iterable statement; ...}
+for identifier in iterable {statement; ...}
 
 while expression {statement; ...}
 

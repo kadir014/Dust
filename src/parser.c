@@ -189,6 +189,18 @@ struct _Node {
 
         /* ELSE */
         struct _Node *else_body;
+
+        /* REPEAT */
+        struct {
+            struct _Node *repeat_expr;
+            struct _Node *repeat_body;
+        };
+
+        /* WHILE */
+        struct {
+            struct _Node *while_expr;
+            struct _Node *while_body;
+        };
     };
 };
 typedef struct _Node Node;
@@ -446,6 +458,34 @@ Node *NodeElse_new(Node *body) {
     Node *node = (Node *)malloc(sizeof(Node));
     node->type = NodeType_ELSE;
     node->else_body = body;
+    return node;
+}
+
+/*
+  Create a new Repeat Loop Node and return its pointer
+
+  Node *expression  ->  Repeat loop's count expression
+  Node *body        ->  Repeat loop's body
+*/
+Node *NodeRepeat_new(Node *expression, Node *body) {
+    Node *node = (Node *)malloc(sizeof(Node));
+    node->type = NodeType_REPEAT;
+    node->repeat_expr = expression;
+    node->repeat_body = body;
+    return node;
+}
+
+/*
+  Create a new While Loop Node and return its pointer
+
+  Node *expression  ->  While loop's condition
+  Node *body        ->  While loop's body
+*/
+Node *NodeWhile_new(Node *expression, Node *body) {
+    Node *node = (Node *)malloc(sizeof(Node));
+    node->type = NodeType_WHILE;
+    node->while_expr = expression;
+    node->while_body = body;
     return node;
 }
 
@@ -1026,6 +1066,7 @@ Node *parse_body(TokenArray *tokens) {
 
             /* ENUM   enum {identifier|assignment, ...} */
             else if (u8isequal(token->data, L"enum")) {
+
                 u8char *name;
                 if (tokens->array[i+1].type == TokenType_IDENTIFIER) {
                     name = tokens->array[i+1].data;
@@ -1111,6 +1152,44 @@ Node *parse_body(TokenArray *tokens) {
                 i += body->body_tokens+2;
 
                 NodeArray_append(node_array, NodeElse_new(body));
+
+                continue;
+            }
+
+            /* REPEAT   repeat expression body */
+            else if (u8isequal(token->data, L"repeat")) {
+
+                TokenArray *slice = TokenArray_slicet(tokens, i+1);
+                TokenArray_append(slice, Token_new(TokenType_EOF, L""));
+                Node *expr = parse_expr(slice);
+                TokenArray_free(slice);
+                i += _last_token_count;
+
+                TokenArray *slice2 = TokenArray_slice(tokens, i+1);
+                Node *body = parse_body(slice2);
+                TokenArray_free(slice2);
+                i += body->body_tokens+2;
+
+                NodeArray_append(node_array, NodeRepeat_new(expr, body));
+
+                continue;
+            }
+
+            /* WHILE   while expression body */
+            else if (u8isequal(token->data, L"while")) {
+
+                TokenArray *slice = TokenArray_slicet(tokens, i+1);
+                TokenArray_append(slice, Token_new(TokenType_EOF, L""));
+                Node *expr = parse_expr(slice);
+                TokenArray_free(slice);
+                i += _last_token_count;
+
+                TokenArray *slice2 = TokenArray_slice(tokens, i+1);
+                Node *body = parse_body(slice2);
+                TokenArray_free(slice2);
+                i += body->body_tokens+2;
+
+                NodeArray_append(node_array, NodeWhile_new(expr, body));
 
                 continue;
             }

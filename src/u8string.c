@@ -8,12 +8,11 @@
 
 */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <wchar.h>
 #include <wctype.h>
-#include <locale.h>
-#include <stdio.h>
 
 typedef wchar_t u8char;
 
@@ -21,6 +20,7 @@ typedef wchar_t u8char;
 #if defined(_WIN32)
 #include <io.h>
 #include <fcntl.h>
+#include <locale.h>
 
 void u8winterminal() {
     setmode(_fileno(stdout), _O_U8TEXT);
@@ -229,7 +229,7 @@ u8char *u8replace(u8char *str, u8char *old, u8char *new) {
     }
   
     result = (u8char *)malloc((i + cnt * (newlen - oldlen) + 1)*sizeof(u8char));
-  
+
     i = 0;
     while (*str) {
         if (wcsstr(str, old) == str) {
@@ -244,3 +244,20 @@ u8char *u8replace(u8char *str, u8char *old, u8char *new) {
     result[i] = '\0';
     return result;
 }
+
+u8char *u8slice(u8char *str, int start, int end) {
+    //TODO: check if string is long enough for slice indices
+    u8char *result = L"";
+
+    while (start <= end) {
+        u8char sbuf[2];
+        sbuf[0] = str[start];
+        sbuf[1] = L'\0';
+        result = u8join(result, sbuf);
+
+        start++;
+    }
+
+    return result;
+}
+

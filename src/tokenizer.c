@@ -256,7 +256,7 @@ void tokenize_append(Token* token, TokenArray *tokens, int x, int y) {
     }
 
     else if (wcslen(t) > 0) {
-        if (u8isidentifier(t) == 0) {
+        if (!u8isidentifier(t)) {
             printf("%d\n", u8isidentifier(t));
             printf("%lc %d\n", t[0], !!iswalnum(t[0]));
             printf("%lc %d\n", t[1], !!iswalnum(t[1]));

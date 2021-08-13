@@ -163,6 +163,16 @@ struct _Node {
         };
 
         struct _Node *else_body;
+
+        struct {
+            struct _Node *repeat_expr;
+            struct _Node *repeat_body;
+        };
+
+        struct {
+            struct _Node *while_expr;
+            struct _Node *while_body;
+        };
     };
 };
 typedef struct _Node Node;
@@ -204,6 +214,10 @@ Node *NodeIf_new(Node *expression, Node *body);
 Node *NodeElif_new(Node *expression, Node *body);
 
 Node *NodeElse_new(Node *body);
+
+Node *NodeRepeat_new(Node *expression, Node *body);
+
+Node *NodeWhile_new(Node *expression, Node *body);
 
 void Node_free(Node *node);
 
