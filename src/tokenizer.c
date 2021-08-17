@@ -359,8 +359,40 @@ TokenArray *tokenize(u8char *raw){
                         token = Token_new(TokenType_EOF, L"");
                     }
 
-                    if (raw[i+1] == L'=') {
+                    if (chr == L'=' && raw[i+1] == L'=') {
                         token->data = L"==";
+                        i++;
+                    }
+                    else if (chr == L'+' && raw[i+1] == L'=') {
+                        token->data = L"+=";
+                        i++;
+                    }
+                    else if (chr == L'-' && raw[i+1] == L'=') {
+                        token->data = L"-=";
+                        i++;
+                    }
+                    else if (chr == L'*' && raw[i+1] == L'=') {
+                        token->data = L"*=";
+                        i++;
+                    }
+                    else if (chr == L'/' && raw[i+1] == L'=') {
+                        token->data = L"/=";
+                        i++;
+                    }
+                    else if (chr == L'^' && raw[i+1] == L'=') {
+                        token->data = L"^=";
+                        i++;
+                    }
+                    else if (chr == L'<' && raw[i+1] == L'=') {
+                        token->data = L"<=";
+                        i++;
+                    }
+                    else if (chr == L'>' && raw[i+1] == L'=') {
+                        token->data = L">=";
+                        i++;
+                    }
+                    else if (chr == L'!' && raw[i+1] == L'=') {
+                        token->data = L"!=";
                         i++;
                     }
                     else {

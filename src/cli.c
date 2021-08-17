@@ -36,13 +36,17 @@ int main(int argc, char *argv[]) {
             wprintf(L"\nDust Programming Language - Command Line Interface\n\n"
                     L"dust help                  : Information about CLI\n"
                     L"dust version               : Version related information\n"
-                    L"dust tokenize source [-fp] : Tokenizes the source, -fp for filepath\n"
-                    L"dust parse source [-fp]    : Parse the source, -fp for filepath\n");
+                    L"dust tokenize source       : Tokenize source code\n"
+                    L"   -fp      : Accept filepath instead of string of code\n"
+                    L"   -nocolor : No ANSI colors in output\n"
+                    L"dust parse source          : Parse source code\n"
+                    L"   -fp      : Accept filepath instead of string of code\n"
+                    L"   -nocolor : No ANSI colors in output\n");
         }
 
         else if (strcmp(argv[1], "version") == 0) {
             wprintf(L"\n"
-                    L"Dust version : 0.0.11\n"
+                    L"Dust version : 0.0.12\n"
                     L"GCC version  : %s\n"
                     L"Platform     : %s\n"
                     L"\n", get_gcc_version(), platform->prettyname);

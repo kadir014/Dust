@@ -148,6 +148,7 @@ class Compiler:
 
     # Link all object files to finish compiling
     os.system(f"gcc -o dust cli.o error.o parser.o platform.o tokenizer.o u8string.o {self.option_handler.get_gcc_argstr()}")
+    
     end_time = time.perf_counter() - start_time
     remove_object_files()
 

@@ -121,7 +121,12 @@ Platform *get_platform(){
 
     platform->hostname = uhostname;
 
+
     #elif defined(__linux__)
+
+    // TODO: get platform properties using 'lsb_release'
+    platform->name = L"linux";
+    platform->prettyname = L"linux"
 
     struct utsname uts;
     uname(&uts);
@@ -138,9 +143,15 @@ Platform *get_platform(){
     swprintf(version, u8size(version), L"%hs", uts.release);
     platform->version = version;
 
+
     #elif defined(__APPLE__)
 
+    // TODO
     platform->kernel = L"Unix";
+    platform->name = L"unknown";
+    platform->hostname = L"unknown";
+    platform->prettyname = L"unknown";
+    platform->version = L"unknown";
 
     #endif
 

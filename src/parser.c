@@ -790,6 +790,19 @@ u8char *Node_repr(Node *node, int ident) {
             finalstr = u8join(finalstr, L"else:\n");
             finalstr = u8join(finalstr, u8join(identstr, Node_repr(node->if_body, ident+1)));
             break;
+
+        case NodeType_REPEAT:
+            finalstr = u8join(finalstr, L"repeat:\n");
+            finalstr = u8join(finalstr, u8join(identstr, Node_repr(node->repeat_expr, ident+1)));
+            finalstr = u8join(finalstr, u8join(identstr, Node_repr(node->repeat_body, ident+1)));
+            break;
+
+        case NodeType_WHILE:
+            finalstr = u8join(finalstr, L"while:\n");
+            finalstr = u8join(finalstr, u8join(identstr, Node_repr(node->while_expr, ident+1)));
+            finalstr = u8join(finalstr, u8join(identstr, Node_repr(node->while_body, ident+1)));
+            break;
+        
     }
 
     return finalstr;
@@ -1511,14 +1524,9 @@ Node *parse_expr_FACTOR(TokenArray *tokens) {
             Node *floatnode = NodeFloat_new(wcstod(u8join(intdata, u8join(L".", current_token(tokens)->data)),
                                                    &floating));
             next_token(tokens);
-            free(integer);
-            free(intdata);
-            free(floating);
             return floatnode;
         }
         else {
-            free(integer);
-            free(intdata);
             return integernode;
         }
     }
