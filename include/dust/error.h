@@ -20,13 +20,15 @@ typedef enum {
 } ErrorType;
 
 
-int ERROR_ANSI;
+extern int ERROR_ANSI;
 
 void raise_ansi(ErrorType type, u8char *message, u8char *source, int x, int y);
 
 void raise_noansi(ErrorType type, u8char *message, u8char *source, int x, int y);
 
 void raise(ErrorType type, u8char *message, u8char *source, int x, int y);
+
+void raise_internal(u8char *message);
 
 
 #endif

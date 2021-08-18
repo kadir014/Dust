@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "dust/u8string.h"
+#include "dust/error.h"
 #if defined(_WIN32)
 #include <winsock2.h>
 #include <windows.h>
@@ -18,17 +19,19 @@
 #include <sys/utsname.h>
 #endif
 
+
 /*
   Get GNU C compiler's version in major.minor.patch format
 */
-u8char _GCC_VERSION_STRING[8];
 u8char *get_gcc_version() {
-    swprintf(_GCC_VERSION_STRING, 8, L"%d.%d.%d", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
-    return _GCC_VERSION_STRING;
+    u8char *result = (u8char *)malloc(10*sizeof(u8char));
+    swprintf(result, 10, L"%d.%d.%d", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
+    return result;
 }
 
+
 /*
-  Get generic OS name
+  Get generic platform name
 */
 u8char *get_osname() {
 #if defined(_WIN32)
@@ -56,6 +59,14 @@ u8char *get_osname() {
 #endif
 }
 
+
+/*
+  name        ->  OS name
+  kernel      ->  Kernel name
+  hostname    ->  Device host/nodename
+  version     ->  OS version
+  prettyname  ->  Usually OS name + version
+*/
 typedef struct {
     u8char *name;
     u8char *kernel;
@@ -65,7 +76,7 @@ typedef struct {
 } Platform;
 
 /*
-  Get plaftorm information
+  Get plaftorm information, return Platform struct
 */
 Platform *get_platform(){
     Platform *platform = (Platform *)malloc(sizeof(Platform));
@@ -124,9 +135,35 @@ Platform *get_platform(){
 
     #elif defined(__linux__)
 
-    // TODO: get platform properties using 'lsb_release'
-    platform->name = L"linux";
-    platform->prettyname = L"linux"
+    FILE *fp;
+    char line[128];
+
+    fp = popen("lsb_release -a", "r");
+    if (fp == NULL) {
+        raise_internal(L"popen failed");
+    }
+
+    while (fgets(line, sizeof(line), fp) != NULL) {
+        u8char uline[128];
+        swprintf(uline, 128, L"%hs", line);
+
+        if (u8startswith(uline, L"Distributor ID:")) {
+            u8char *new = u8strip(u8slice(uline, u8find(uline, L":")+1, u8len(uline)));
+            platform->name = new;
+        }
+
+        else if (u8startswith(uline, L"Description:")) {
+            u8char *new = u8strip(u8slice(uline, u8find(uline, L":")+1, u8len(uline)));
+            platform->prettyname = new;
+        }
+
+        else if (u8startswith(uline, L"Release:")) {
+            u8char *new = u8strip(u8slice(uline, u8find(uline, L":")+1, u8len(uline)));
+            platform->version = new;
+        }
+    }
+
+    pclose(fp);
 
     struct utsname uts;
     uname(&uts);
@@ -138,10 +175,6 @@ Platform *get_platform(){
     u8char *hostname = (u8char *)malloc(sizeof(u8char)*64);
     swprintf(hostname, u8size(hostname), L"%hs", uts.nodename);
     platform->hostname = hostname;
-
-    u8char *version = (u8char *)malloc(sizeof(u8char)*12);
-    swprintf(version, u8size(version), L"%hs", uts.release);
-    platform->version = version;
 
 
     #elif defined(__APPLE__)
