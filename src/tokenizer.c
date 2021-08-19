@@ -545,12 +545,17 @@ TokenArray *tokenize_file(char *filepath) {
     long fsize = ftell(f);
     fseek(f, 0, SEEK_SET);
 
-    u8char *buffer = malloc((fsize + 1)*sizeof(u8char));
-    fread(buffer, sizeof(u8char), fsize, f);
+    u8char *buffer = L"";
+    u8char *altbuffer = (u8char *)malloc(fsize*sizeof(u8char));
+
+    while (fgetws(altbuffer, fsize, f) != NULL) {
+        buffer = u8join(buffer, altbuffer);
+    }
+
     fclose(f);
+    free(altbuffer);
 
     if (buffer) {
-        buffer[fsize] = L'\0';
         TokenArray *token_array = tokenize(buffer);
         free(buffer);
         return token_array;

@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
 
     //TODO: Better argument parsing
     if (argc == 1) {
-        wprintf(L"\nUse 'dust help' to see available commands\n");
+        wprintf(L"\nUse 'dust help' to see available commands\n\n");
     }
 
     else {
@@ -41,14 +41,15 @@ int main(int argc, char *argv[]) {
                     L"   -nocolor : No ANSI colors in output\n"
                     L"dust parse source          : Parse source code\n"
                     L"   -fp      : Accept filepath instead of string of code\n"
-                    L"   -nocolor : No ANSI colors in output\n");
+                    L"   -nocolor : No ANSI colors in output\n"
+                    L"\n");
         }
 
         else if (strcmp(argv[1], "version") == 0) {
             wprintf(L"\n"
-                    L"Dust version : 0.0.13\n"
-                    L"GCC version  : %s\n"
-                    L"Platform     : %s\n"
+                    L"Dust version : 0.0.14\n"
+                    L"GCC version  : %ls\n"
+                    L"Platform     : %ls\n"
                     L"\n", get_gcc_version(), platform->prettyname);
         }
 
@@ -68,7 +69,7 @@ int main(int argc, char *argv[]) {
                 tokens = tokenize(ws);
             }
 
-            wprintf(L"\n%ls\n", TokenArray_repr(tokens));
+            wprintf(L"\n%ls\n\n", TokenArray_repr(tokens));
 
             TokenArray_free(tokens);
         }
@@ -91,14 +92,14 @@ int main(int argc, char *argv[]) {
 
             Node *expr = parse_body(tokens);
 
-            wprintf(L"\n%ls\n", Node_repr(expr, 0));
+            wprintf(L"\n%ls\n\n", Node_repr(expr, 0));
 
             TokenArray_free(tokens);
             Node_free(expr);
         }
 
         else {
-            wprintf(L"\nUnknown command '%hs'\nUse 'dust help' to see available commands\n", argv[1]);
+            wprintf(L"\nUnknown command '%hs'\nUse 'dust help' to see available commands\n\n", argv[1]);
         }
     }
 

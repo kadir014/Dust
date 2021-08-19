@@ -23,10 +23,10 @@
 /*
   Get GNU C compiler's version in major.minor.patch format
 */
+u8char _GCC_VERSION_STRING[11];
 u8char *get_gcc_version() {
-    u8char *result = (u8char *)malloc(10*sizeof(u8char));
-    swprintf(result, 10, L"%d.%d.%d", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
-    return result;
+    swprintf(_GCC_VERSION_STRING, 11, L"%d.%d.%d", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
+    return _GCC_VERSION_STRING;
 }
 
 
