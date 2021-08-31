@@ -31,9 +31,9 @@ u8char *get_gcc_version() {
 
 
 /*
-  Get generic platform name
+  Get generic system name
 */
-u8char *get_osname() {
+u8char *get_system() {
 #if defined(_WIN32)
     return L"Windows";
 #elif defined(__linux__)
@@ -61,11 +61,11 @@ u8char *get_osname() {
 
 
 /*
-  name        ->  OS name
-  kernel      ->  Kernel name
-  hostname    ->  Device host/nodename
-  version     ->  OS version
-  prettyname  ->  Usually OS name + version
+  u8char *name        ->  OS name
+  u8char *kernel      ->  Kernel name
+  u8char *hostname    ->  Device host/nodename
+  u8char *version     ->  OS version
+  u8char *prettyname  ->  Usually OS name + version
 */
 typedef struct {
     u8char *name;
@@ -189,4 +189,69 @@ Platform *get_platform(){
     #endif
 
     return platform;
+}
+
+
+/*
+  u8char *name   ->  Processor name
+  int corecount  ->  Core count
+*/
+typedef struct {
+    u8char *name;
+    int corecount;
+} CPUInfo;
+
+/*
+  Get processor information, return CPUInfo struct
+*/
+CPUInfo *get_cpuinfo() {
+    CPUInfo *cpuinfo = (CPUInfo *)malloc(sizeof(CPUInfo));
+
+    #if defined(_WIN32)
+
+    FILE *fp;
+    char line[128];
+
+    fp = popen("wmic cpu get NumberOfCores", "r");
+    if (fp == NULL) {
+        raise_internal(L"popen failed");
+    }
+
+    while (fgets(line, sizeof(line), fp) != NULL) {
+        u8char *uline = (u8char *)malloc(128*sizeof(u8char));
+        swprintf(uline, 128, L"%hs", line);
+        uline = u8replace(uline, L"\n", L"");
+        uline = u8strip(uline);
+
+        if (!u8startswith(uline, L"NumberOfCores") && wcslen(uline) > 0) {
+            u8char *end;
+            int corecount = wcstol(uline, &end, 10);
+            cpuinfo->corecount = corecount;
+        }
+    }
+    pclose(fp);
+
+    FILE *fp_;
+    char line_[128];
+
+    fp_ = popen("wmic cpu get Name", "r");
+    if (fp_ == NULL) {
+        raise_internal(L"popen failed");
+    }
+
+    while (fgets(line_, sizeof(line_), fp_) != NULL) {
+        u8char *uline = (u8char *)malloc(128*sizeof(u8char));
+        swprintf(uline, 128, L"%hs", line_);
+        uline = u8replace(uline, L"\n", L"");
+        uline = u8strip(uline);
+
+        if (!u8startswith(uline, L"Name") && wcslen(uline) > 0) {
+            cpuinfo->name = uline;
+        }
+    }
+    pclose(fp_);
+
+    #endif
+
+    return cpuinfo;
 }

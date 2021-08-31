@@ -17,7 +17,7 @@
 typedef wchar_t u8char;
 
 
-void u8winterminal();
+void u8terminal();
 
 size_t u8len(u8char *str);
 
@@ -54,6 +54,8 @@ u8char *u8fill(u8char *dest, u8char *str, int amount);
 u8char *u8replace(u8char *str, u8char *old, u8char *new);
 
 u8char *u8slice(u8char *str, int start, int end);
+
+u8char *ctou8(char *nstr);
 
 
 #endif

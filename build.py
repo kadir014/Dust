@@ -7,17 +7,22 @@
   https://github.com/kadir014/Dust
 
 
-  Dust script to help building
+  Dust builder script
   ----------------------------
+  This Python script is used to build (compile) Dust and
+  distribute cross-platform packages.
+  This script must be run in the same directory as Dust.
 
+  a) Building Dust
+  ----------------------------
   Script assumes MinGW binaries are on PATH as a prerequisite.
   Just simply run the script with 'python build.py', (or 'py',
   'python3' depending on the platform.)
 
   By default, all cores of the machine are used to reduce compile
-  time. You can use '-core' flag to adjust number of cores used
-  manually. For example, 'python build.py -core1' uses only one
-  core, '-core2' uses 2 core, '-core4' uses 4 core and suchlike.
+  time. You can use '-j' flag to adjust number of cores used
+  manually. For example, 'python build.py -j1' uses only one
+  core, '-j2' uses 2 core, '-j4' uses 4 core and suchlike.
 
   You can use flags '-O' flag to set compiler optimization.
   Compilation time increases as the optimization level go higher.
@@ -26,11 +31,27 @@
     -O2  -  Optimize more
     -O3  -  Optimize even more
 
+  All files created during building are cleaned afterwards by
+  default, but one can use `--clean` flag to remove them manually.
+
+  b) Distributing Dust
+  ----------------------------
+  Use '--package' flag to distribute Dust package.
+  Any dependency will be downloaded on the fly.
+
+  Optional flags are:
+    --package-dist   -  Just archive Dust
+    --package-clean  -  Clean remaining files from previous
+                        packaging (This shouldn't be used
+                        normally because all extra files are
+                        removed by default.)
+
 """
 
 import os
 import sys
 import platform
+import pathlib
 import time
 import multiprocessing
 import subprocess
@@ -40,27 +61,25 @@ GH_REPO = "https://github.com/kadir014/Dust"
 CPU_COUNT = multiprocessing.cpu_count()
 FINAL_BUILD = "dust.exe" if platform.system() == "Windows" else "dust"
 
+DUST_PATH = pathlib.Path(os.getcwd()).parent
+
+SOURCE_FILES = [
+  DUST_PATH / "src" / "cli.c",
+  DUST_PATH / "src" / "error.c",
+  DUST_PATH / "src" / "parser.c",
+  DUST_PATH / "src" / "platform.c",
+  DUST_PATH / "src" / "tokenizer.c",
+  DUST_PATH / "src" / "u8string.c",
+  DUST_PATH / "include" / "dust" / "ansi.h",
+  DUST_PATH / "include" / "dust" / "error.h",
+  DUST_PATH / "include" / "dust" / "parser.h",
+  DUST_PATH / "include" / "dust" / "platform.h",
+  DUST_PATH / "include" / "dust" / "tokenizer.h",
+  DUST_PATH / "include" / "dust" / "u8string.h",
+]
+
 class ValidityError(Exception): pass
 class OptionError(Exception): pass
-
-
-# Verify source and include files before anything else
-# All files must be in the same directory as the build script
-if not (os.path.exists(os.path.join("src", "cli.c"))                   and \
-        os.path.exists(os.path.join("src", "error.c"))                 and \
-        os.path.exists(os.path.join("src", "parser.c"))                and \
-        os.path.exists(os.path.join("src", "platform.c"))              and \
-        os.path.exists(os.path.join("src", "tokenizer.c"))             and \
-        os.path.exists(os.path.join("src", "u8string.c"))              and \
-        os.path.exists(os.path.join("include", "dust", "ansi.h"))      and \
-        os.path.exists(os.path.join("include", "dust", "error.h"))     and \
-        os.path.exists(os.path.join("include", "dust", "parser.h"))    and \
-        os.path.exists(os.path.join("include", "dust", "platform.h"))  and \
-        os.path.exists(os.path.join("include", "dust", "tokenizer.h")) and \
-        os.path.exists(os.path.join("include", "dust", "u8string.h"))):
-  
-  raise ValidityError("Could not verify source files" + \
-                      "Try cloning the repo again from " + GH_REPO)
 
 
 # Remove all object (.o) files from the previous compilation
@@ -74,19 +93,25 @@ def remove_object_files():
 # simplify building
 class OptionHandler:
   def __init__(self):
-    self.cores        = CPU_COUNT # -corex
+    self.cores        = CPU_COUNT # -jx
     self.optimization = 0         # -Ox
-    self.gcc_args = []            # GCC arguments
+    self.clean        = False     # --clean
+    
+    self.package       = False # --package
+    self.package_dist  = False # --package-dist
+    self.package_clean = False
+
+    self.gcc_args = [] # GCC arguments
 
     if platform.system() == "Windows": self.gcc_args.append("-lws2_32")
 
   def add_option(self, opt):
-    if opt.startswith("-core"):
+    if opt.startswith("-j"):
       try:
         self.cores = int(opt[5:])
 
       except ValueError:
-        raise OptionError(f"integer expected after -core flag (-core0, -core4, etc..)")
+        raise OptionError(f"integer expected after -j flag (-j0, -j4, etc..)")
 
     elif opt.startswith("-O"):
       try:
@@ -97,15 +122,24 @@ class OptionHandler:
       except ValueError:
         raise OptionError(f"integer expected after -O flag (-O0, -O2, etc..)")
 
+    elif opt.startswith("--clean"):
+      self.clean = True
+
+    elif opt.startswith("--package"):
+      self.package = True
+
+      if opt == "--package-dist":
+        self.package_dist = True
+
+      elif opt == "--package-clean":
+        self.package_clean = True
+
     else:
       raise OptionError(f"unknown option '{opt}'")
 
   def get_gcc_argstr(self):
-    result = " " + " ".join(self.gcc_args)
-
-    result += f" -O{self.optimization}"
-
-    return result
+    argstr = f" {' '.join(self.gcc_args)} -O{self.optimization}"
+    return argstr
 
 
 class Compiler:
@@ -170,15 +204,33 @@ if __name__ == "__main__":
   for arg in sys.argv[1:]:
     option_handler.add_option(arg)
 
-  if option_handler.cores > CPU_COUNT:
-    print(f"warning: given core count ({option_handler.cores})" + \
-          f" is higher than your machine's core count ({CPU_COUNT})\n")
+  # Clean build remainings
+  if option_handler.clean:
+    remove_object_files()
+    print("Succesfully cleaned building remaining files.")
+    sys.exit(0)
 
-  print(f"Started compiling on {option_handler.cores} cores\n" +
-        f"Optimization level: {option_handler.optimization}\n")
+  # Clean packaging remainings
+  if option_handler.package_clean:
+    print("Succesfully cleaned packaging remaining files.")
+    sys.exit(0)
 
-  compiler = Compiler(option_handler)
+  # Package Dust
+  # ** TODO **
+  if option_handler.package:
+    pass
 
-  end_time = compiler.compile()
+  # Build Dust
+  else:
+    if option_handler.cores > CPU_COUNT:
+      print(f"warning: given core count ({option_handler.cores})" + \
+            f" is higher than your machine's core count ({CPU_COUNT})\n")
 
-  print(f"Dust succesfully built in {round(end_time, 1)} secs ({int(end_time*1000)} ms)")
+    print(f"Started compiling on {option_handler.cores} cores\n" +
+          f"Optimization level: {option_handler.optimization}\n")
+
+    compiler = Compiler(option_handler)
+
+    end_time = compiler.compile()
+
+    print(f"Dust succesfully built in {round(end_time, 1)} secs ({int(end_time*1000)} ms)")

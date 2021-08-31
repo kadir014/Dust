@@ -28,5 +28,12 @@ typedef struct {
 
 Platform *get_platform();
 
+typedef struct {
+    u8char *name;
+    int corecount;
+} CPUInfo;
+
+CPUInfo *get_cpuinfo();
+
 
 #endif

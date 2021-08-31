@@ -87,7 +87,11 @@ typedef enum {
 
 struct _Node;
 
-
+/*
+  sturct _Node *array  ->  Array of Nodes
+  size_t size          ->  Default size
+  size_t used          ->  Length of the array
+*/
 typedef struct {
     struct _Node *array;
     size_t size;
@@ -95,6 +99,10 @@ typedef struct {
 } NodeArray;
 
 
+/*
+  NodeType type  ->  Type of the Node
+  union {...}    ->  Fields of the Node
+*/
 struct _Node {
     NodeType type;
     union {

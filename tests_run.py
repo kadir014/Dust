@@ -6,6 +6,13 @@
   Copyright © Kadir Aksoy
   https://github.com/kadir014/Dust
 
+
+  Dust tester script
+  ----------------------------
+  This Python script is used to test various Dust library
+  functions using `tests.c`
+  This script must be run in the same directory as Dust. 
+
 """
 
 
@@ -14,13 +21,12 @@ import time
 import platform
 import subprocess
 
-print("Running tests...\n")
+print("\nRunning tests...\n")
 
 if os.path.exists("tests.exe"): os.remove("tests.exe")
 
 if platform.system() == "Windows":
-    #TODO: Add windows flags
-    os.system("gcc -o tests tests.c src/u8string.c src/error.c src/platform.c src/tokenizer.c src/parser.c -I./include/")
+    os.system("gcc -o tests tests.c src/u8string.c src/error.c src/platform.c src/tokenizer.c src/parser.c -I./include/ -lws2_32")
 else:
     os.system("gcc -o tests tests.c src/u8string.c src/error.c src/platform.c src/tokenizer.c src/parser.c -I./include/")
 

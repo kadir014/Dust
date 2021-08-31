@@ -34,6 +34,11 @@ typedef enum {
 } TokenType;
 
 
+/*
+  TokenType type  ->  Type of the token
+  u8char *data    ->  Token's data
+  int x, y        ->  Corresponding position of Token in file
+*/
 typedef struct {
     TokenType type;
     u8char *data;
@@ -63,10 +68,7 @@ Token *Token_new(TokenType type, u8char *data) {
   Token *token  ->  Token to free
 */
 void Token_free(Token *token) {
-    token->type = 0;
     free(token->data);
-    token->x = 0;
-    token->y = 0;
     free(token);
 }
 
@@ -122,6 +124,11 @@ u8char *Token_repr(Token *token) {
 }
 
 
+/*
+  Token *array  ->  Array of Tokens
+  size_t size   ->  Default Size
+  size_t used   ->  Length of the array
+*/
 typedef struct {
     Token *array;
     size_t size;

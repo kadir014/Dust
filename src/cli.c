@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <wchar.h>
 #include "dust/u8string.h"
 #include "dust/error.h"
@@ -19,91 +20,161 @@
 #include "dust/parser.h"
 
 
+typedef enum {
+    cmd_none,    // no command was passed
+    cmd_unknown, // unknown command was passed
+    cmd_help,
+    cmd_version,
+    cmd_tokenize,
+    cmd_parse
+} CommandType;
+
+typedef struct {
+    bool opt_fp;      // --fp
+    bool opt_nocolor; // --no-color
+
+    CommandType cmd;
+} ArgumentParser;
+
+ArgumentParser *ArgumentParser_new() {
+    ArgumentParser *ap = (ArgumentParser *)malloc(sizeof(ArgumentParser));
+    ap->opt_fp = false;
+    ap->opt_nocolor = false;
+    return ap;
+}
+
+void ArgumentParser_parse(ArgumentParser *ap, int argc, char *argv[]) {
+    if (argc == 1) {
+        ap->cmd = cmd_none;
+        return;
+    }
+    else {
+        if (strcmp(argv[1], "help") == 0) {
+            ap->cmd = cmd_help;
+            return;
+        }
+        else if (strcmp(argv[1], "version") == 0) {
+            ap->cmd = cmd_version;
+            return;
+        }
+        else if (strcmp(argv[1], "tokenize") == 0) {
+            ap->cmd = cmd_tokenize;
+
+            // no need to check options/flags
+            if (argc == 2) return;
+
+            int i = 0;
+            while (i < argc) {
+                if (strcmp(argv[i], "--fp") == 0) {
+                    ap->opt_fp = true;
+                }
+                else if (strcmp(argv[i], "--no-color") == 0) {
+                    ap->opt_nocolor = true;
+                }
+                i++;
+            }
+
+            return;
+        }
+        else if (strcmp(argv[1], "parse") == 0) {
+            ap->cmd = cmd_parse;
+
+            // no need to check options/flags
+            if (argc == 2) return;
+
+            int i = 0;
+            while (i < argc) {
+                if (strcmp(argv[i], "--fp") == 0) {
+                    ap->opt_fp = true;
+                }
+                else if (strcmp(argv[i], "--no-color") == 0) {
+                    ap->opt_nocolor = true;
+                }
+                i++;
+            }
+
+            return;
+        }
+    }
+}
+
+
 int main(int argc, char *argv[]) {
     Platform *platform = get_platform();
 
-    if (u8isequal(platform->name, L"Windows")) {
-        u8winterminal();
-    }
+    u8terminal();
 
-    //TODO: Better argument parsing
-    if (argc == 1) {
+    ArgumentParser *ap = ArgumentParser_new();
+    ArgumentParser_parse(ap, argc, argv);
+
+    if (ap->cmd == cmd_none) {
         wprintf(L"\nUse 'dust help' to see available commands\n\n");
     }
 
-    else {
-        if (strcmp(argv[1], "help") == 0) {
-            wprintf(L"\nDust Programming Language - Command Line Interface\n\n"
-                    L"dust help                  : Information about CLI\n"
-                    L"dust version               : Version related information\n"
-                    L"dust tokenize source       : Tokenize source code\n"
-                    L"   -fp      : Accept filepath instead of string of code\n"
-                    L"   -nocolor : No ANSI colors in output\n"
-                    L"dust parse source          : Parse source code\n"
-                    L"   -fp      : Accept filepath instead of string of code\n"
-                    L"   -nocolor : No ANSI colors in output\n"
-                    L"\n");
-        }
-
-        else if (strcmp(argv[1], "version") == 0) {
-            wprintf(L"\n"
-                    L"Dust version : 0.0.14\n"
-                    L"GCC version  : %ls\n"
-                    L"Platform     : %ls\n"
-                    L"\n", get_gcc_version(), platform->prettyname);
-        }
-
-        else if (strcmp(argv[1], "tokenize") == 0) {
-            TokenArray *tokens = TokenArray_new(1);
-
-            if (argc == 4 && strcmp(argv[3], "-nocolor") == 0) {
-                ERROR_ANSI = 0;
-            }
-
-            if (argc == 4 && strcmp(argv[3], "-fp") == 0) {
-                tokens = tokenize_file(argv[2]);
-            }
-            else {
-                wchar_t ws[500];
-                swprintf(ws, 500, L"%hs", argv[2]);
-                tokens = tokenize(ws);
-            }
-
-            wprintf(L"\n%ls\n\n", TokenArray_repr(tokens));
-
-            TokenArray_free(tokens);
-        }
-
-        else if (strcmp(argv[1], "parse") == 0) {
-            TokenArray *tokens = TokenArray_new(1);
-
-            if (argc == 4 && (strcmp(argv[3], "-nocolor")) == 0) {
-                ERROR_ANSI = 0;
-            }
-
-            if (argc == 4 && (strcmp(argv[3], "-fp")) == 0) {
-                tokens = tokenize_file(argv[2]);
-            }
-            else {
-                wchar_t ws[500];
-                swprintf(ws, 500, L"%hs", argv[2]);
-                tokens = tokenize(ws);
-            }
-
-            Node *expr = parse_body(tokens);
-
-            wprintf(L"\n%ls\n\n", Node_repr(expr, 0));
-
-            TokenArray_free(tokens);
-            Node_free(expr);
-        }
-
-        else {
-            wprintf(L"\nUnknown command '%hs'\nUse 'dust help' to see available commands\n\n", argv[1]);
-        }
+    else if (ap->cmd == cmd_help) {
+        wprintf(L"\nDust Programming Language - Command Line Interface\n\n"
+                L"dust help      :  Information about CLI\n"
+                L"dust version   :  Version related information\n"
+                L"dust tokenize  :  Tokenize source code\n"
+                L"dust parse     :  Parse source code\n"
+                L"\n");
     }
 
+    else if (ap->cmd == cmd_version) {
+        wprintf(L"\n"
+                L"Dust version : 0.0.15\n"
+                L"GCC version  : %ls\n"
+                L"Platform     : %ls\n"
+                L"\n", get_gcc_version(), platform->prettyname);
+    }
+    else if (ap->cmd == cmd_tokenize) {
+        TokenArray *tokens = TokenArray_new(1);
+
+        if (ap->opt_nocolor) {
+            ERROR_ANSI = 0;
+        }
+
+        if (ap->opt_fp) {
+            tokens = tokenize_file(argv[2]);
+        }
+        else {
+            tokens = tokenize(ctou8(argv[2]));
+        }
+
+        wprintf(L"\n%ls\n\n", TokenArray_repr(tokens));
+
+        TokenArray_free(tokens);
+    }
+
+    else if (ap->cmd == cmd_parse) {
+        TokenArray *tokens = TokenArray_new(1);
+
+        if (ap->opt_nocolor) {
+            ERROR_ANSI = 0;
+        }
+
+        if (ap->opt_fp) {
+            tokens = tokenize_file(argv[2]);
+        }
+        else {
+            tokens = tokenize(ctou8(argv[2]));
+        }
+
+        Node *expr = parse_body(tokens);
+
+        wprintf(L"\n%ls\n\n", Node_repr(expr, 0));
+
+        TokenArray_free(tokens);
+        Node_free(expr);
+    }
+
+    else if (ap->cmd == cmd_unknown) {
+        wprintf(L"\nUnknown command '%hs'\nUse 'dust help' to see available commands\n\n", argv[1]);
+    }
+
+
     free(platform);
+    free(ap);
 
     return 0;
 }
