@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include "dust/ustring.h"
 #include "dust/error.h"
+
 #if defined(_WIN32)
 #include <winsock2.h>
 #include <windows.h>
@@ -31,9 +32,11 @@ u32char *get_gcc_version() {
 }
 
 
-/*
-  Get generic system name
-*/
+/**
+ * @brief Get generic system name
+ * 
+ * @return String of system name
+ */
 u32char *get_osname() {
 #if defined(_WIN32)
     return U"Windows";
@@ -61,13 +64,13 @@ u32char *get_osname() {
 }
 
 
-/*
-  u8char *name        ->  OS name
-  u8char *kernel      ->  Kernel name
-  u8char *hostname    ->  Device host/node name
-  u8char *version     ->  OS version
-  u8char *prettyname  ->  Usually OS name + version
-*/
+/**
+ * @param name OS Name
+ * @param kernel Kernel name
+ * @param hostname Device host/node name
+ * @param version OS version
+ * @param prettyname Pretty OS name (Usually OS name + version)
+ */
 typedef struct {
     u32char *name;
     u32char *kernel;
@@ -76,9 +79,11 @@ typedef struct {
     u32char *prettyname;
 } Platform;
 
-/*
-  Get plaftorm information, return Platform struct
-*/
+/**
+ * @brief Get platform information
+ * 
+ * @return Platform object
+ */
 Platform get_platform(){
     Platform platform;
 
@@ -185,6 +190,7 @@ Platform get_platform(){
 }
 
 
+//TODO: improve gathering of CPU information, currently disabled
 #ifdef ALLOW_CPU_INFO
 /*
   u8char *name   ->  Processor name

@@ -98,11 +98,6 @@ typedef struct {
 } NodeArray;
 
 
-/*
-  NodeType type  ->  Type of the Node
-  union {...}    ->  Fields of the Node
-*/
-
 /**
  * @param type Type of the node
  * @param union{...} Fields of the node
@@ -336,13 +331,14 @@ Node *NodeAssign_new(u32char *variable, Node *expression) {
     return node;
 }
 
-/*
-  Create a new Binary Operator Node and return its pointer
-
-  OpType op    ->  Type of the operator
-  Node* left   ->  Left-hand node
-  Node* right  ->  Right-hand node
-*/
+/**
+ * @brief Create a new binary operator node
+ * 
+ * @param op Type of the operator
+ * @param left Left-hand node
+ * @param right Right-hand node
+ * @return Node's pointer
+ */
 Node *NodeBinOp_new(OpType op, Node *left, Node *right) {
     Node *node = (Node *)malloc(sizeof(Node));
     node->type = NodeType_BINOP;
@@ -352,12 +348,13 @@ Node *NodeBinOp_new(OpType op, Node *left, Node *right) {
     return node;
 }
 
-/*
-  Create a new Unary Operator Node and return its pointer
-
-  OpType op    ->  Type of the operator
-  Node *right  ->  Right-hand node
-*/
+/**
+ * @brief Create a new unary operator node
+ * 
+ * @param op Type of the operator
+ * @param right Right-hand node
+ * @return Node's pointer
+ */
 Node *NodeUnaryOp_new(OpType op, Node *right) {
     Node *node = (Node *)malloc(sizeof(Node));
     node->type = NodeType_UNARYOP;
@@ -366,11 +363,12 @@ Node *NodeUnaryOp_new(OpType op, Node *right) {
     return node;
 }
 
-/*
-  Create a new Import Node and return its pointer
-
-  u32char *module  ->  Name of the module
-*/
+/**
+ * @brief Create a new import node
+ * 
+ * @param module Name of the module
+ * @return Node's pointer
+ */
 Node *NodeImport_new(u32char *module) {
     Node *node = (Node *)malloc(sizeof(Node));
     node->type = NodeType_IMPORT;
@@ -378,12 +376,13 @@ Node *NodeImport_new(u32char *module) {
     return node;
 }
 
-/*
-  Create a new Relative Import Node and return its pointer
-
-  u32char *module  ->  Name of the module
-  u32char *member  ->  Member to import from module
-*/
+/**
+ * @brief Create a new relative import node
+ * 
+ * @param module Name of the module
+ * @param member Member to import from module
+ * @return Node's pointer
+ */
 Node *NodeImportFrom_new(u32char *module, u32char *member) {
     Node *node = (Node *)malloc(sizeof(Node));
     node->type = NodeType_IMPORTF;
@@ -392,12 +391,13 @@ Node *NodeImportFrom_new(u32char *module, u32char *member) {
     return node;
 }
 
-/*
-  Create a new Subscript (Indexing) Node and return its pointer
-
-  Node *snode  ->  Node that is getting subscripted
-  Node *expr   ->  Subscripting expression
-*/
+/**
+ * @brief Create a new subscript (indexing) node
+ * 
+ * @param snode Node that is getting subscripted
+ * @param expr Subscripting expression
+ * @return Node's pointer
+ */
 Node *NodeSubscript_new(Node *snode, Node *expr) {
     Node *node = (Node *)malloc(sizeof(Node));
     node->type = NodeType_SUBSCRIPT;
@@ -406,12 +406,13 @@ Node *NodeSubscript_new(Node *snode, Node *expr) {
     return node;
 }
 
-/*
-  Create a new Child (Dot notation) Node and return its pointer
-
-  Node *parent  ->  Parent node
-  Node *child   ->  Child node
-*/
+/**
+ * @brief Create a new child (dot notation) node
+ * 
+ * @param parent Parent node
+ * @param child Child node
+ * @return Node's pointer
+ */
 Node *NodeChild_new(Node *parent, Node *child) {
     Node *node = (Node *)malloc(sizeof(Node));
     node->type = NodeType_CHILD;
@@ -420,12 +421,13 @@ Node *NodeChild_new(Node *parent, Node *child) {
     return node;
 }
 
-/*
-  Create a new Enumeration Node and return its pointer
-
-  Node *name  ->  Identifier of enumeration
-  Node *body  ->  Body of enumeration
-*/
+/**
+ * @brief Create a new enumeration node
+ * 
+ * @param name Identifier (name) of enumeration
+ * @param body Body of enumeration
+ * @return Node's pointer
+ */
 Node *NodeEnum_new(u32char *name, Node *body) {
     Node *node = (Node *)malloc(sizeof(Node));
     node->type = NodeType_ENUM;
@@ -434,12 +436,13 @@ Node *NodeEnum_new(u32char *name, Node *body) {
     return node;
 }
 
-/*
-  Create a new Body Node and return its pointer
-
-  NodeArray *node_array  ->  Array of statement nodes
-  int tokens             ->  Number of tokens body includes
-*/
+/**
+ * @brief Create a new body node
+ * 
+ * @param node_array Array of statement nodes
+ * @param tokens Number of tokens body includes
+ * @return Node's pointer 
+ */
 Node *NodeBody_new(NodeArray *node_array, int tokens) {
     Node *node = (Node *)malloc(sizeof(Node));
     node->type = NodeType_BODY;
@@ -448,12 +451,13 @@ Node *NodeBody_new(NodeArray *node_array, int tokens) {
     return node;
 }
 
-/*
-  Create a new If Node and return its pointer
-
-  Node *expression  ->  If statement's condition
-  Node *body        ->  If statement's body
-*/
+/**
+ * @brief Create a new if node
+ * 
+ * @param expression If statement's condition
+ * @param body If statement's body
+ * @return Node's pointer
+ */
 Node *NodeIf_new(Node *expression, Node *body) {
     Node *node = (Node *)malloc(sizeof(Node));
     node->type = NodeType_IF;
@@ -462,12 +466,13 @@ Node *NodeIf_new(Node *expression, Node *body) {
     return node;
 }
 
-/*
-  Create a new Elif (Else If) Node and return its pointer
-
-  Node *expression  ->  Elif statement's condition
-  Node *body        ->  Elif statement's body
-*/
+/**
+ * @brief Create a new elif (else if) node
+ * 
+ * @param expression Elif statement's condition
+ * @param body Elif statement's body
+ * @return Node's pointer
+ */
 Node *NodeElif_new(Node *expression, Node *body) {
     Node *node = (Node *)malloc(sizeof(Node));
     node->type = NodeType_ELIF;
@@ -476,11 +481,12 @@ Node *NodeElif_new(Node *expression, Node *body) {
     return node;
 }
 
-/*
-  Create a new Else Node and return its pointer
-
-  Node *body  ->  Else statement's body
-*/
+/**
+ * @brief Create a new else node
+ * 
+ * @param body Else statement's body
+ * @return Node's pointer
+ */
 Node *NodeElse_new(Node *body) {
     Node *node = (Node *)malloc(sizeof(Node));
     node->type = NodeType_ELSE;
@@ -488,12 +494,13 @@ Node *NodeElse_new(Node *body) {
     return node;
 }
 
-/*
-  Create a new Repeat Loop Node and return its pointer
-
-  Node *expression  ->  Repeat loop's count expression
-  Node *body        ->  Repeat loop's body
-*/
+/**
+ * @brief Create a new repeat loop node
+ * 
+ * @param expression Repeat loop's expression (count)
+ * @param body Repeat loop's body
+ * @return Node's pointer
+ */
 Node *NodeRepeat_new(Node *expression, Node *body) {
     Node *node = (Node *)malloc(sizeof(Node));
     node->type = NodeType_REPEAT;
@@ -502,12 +509,13 @@ Node *NodeRepeat_new(Node *expression, Node *body) {
     return node;
 }
 
-/*
-  Create a new While Loop Node and return its pointer
-
-  Node *expression  ->  While loop's condition
-  Node *body        ->  While loop's body
-*/
+/**
+ * @brief Create a new while loop node
+ * 
+ * @param expression While loop's condition
+ * @param body While loop's body
+ * @return Node's pointer
+ */
 Node *NodeWhile_new(Node *expression, Node *body) {
     Node *node = (Node *)malloc(sizeof(Node));
     node->type = NodeType_WHILE;
@@ -516,13 +524,14 @@ Node *NodeWhile_new(Node *expression, Node *body) {
     return node;
 }
 
-/*
-  Create a new For Loop Node and return its pointer
-
-  Node *var       ->  For loop's variable
-  Node *iterator  ->  For loop's iterator
-  Node *body      ->  For loop's body
-*/
+/**
+ * @brief Create a new for loop node
+ * 
+ * @param var For loop's variable
+ * @param iterator For loop's iterator
+ * @param body For loop's body
+ * @return Node's pointer
+ */
 Node *NodeFor_new(Node *var, Node *iterator, Node *body) {
     Node *node = (Node *)malloc(sizeof(Node));
     node->type = NodeType_FOR;
@@ -532,11 +541,12 @@ Node *NodeFor_new(Node *var, Node *iterator, Node *body) {
     return node;
 }
 
-/*
-  Release all resources used by the Node
-
-  Node *node  ->  Node to free
-*/
+//TODO: cover all cases
+/**
+ * @brief Release all resources used by the node
+ * 
+ * @param node Node to free
+ */
 void Node_free(Node *node) {
     switch (node->type) {
         case NodeType_STRING:
@@ -556,11 +566,13 @@ void Node_free(Node *node) {
     free(node);
 }
 
-/*
-  Return a string representation of Node
-
-  Node *node  ->  Node to return a repr. string of
-*/
+/**
+ * @brief Represent node as a string
+ * 
+ * @param node Node to return a repr. string of
+ * @param ident Indentation
+ * @return Representation string
+ */
 u32char *Node_repr(Node *node, int ident) {
     u32char *finalstr = U"";
 
@@ -859,11 +871,12 @@ u32char *Node_repr(Node *node, int ident) {
 }
 
 
-/*
-  Create a new NodeArray and return its pointer
-
-  size_t def_size  ->  Initial size of the array
-*/
+/**
+ * @brief Create a new node array
+ * 
+ * @param def_size Initial size of the array
+ * @return Node array's pointer
+ */
 NodeArray *NodeArray_new(size_t def_size) {
     NodeArray *node_array = (NodeArray *)malloc(sizeof(NodeArray));
 
@@ -874,11 +887,11 @@ NodeArray *NodeArray_new(size_t def_size) {
     return node_array;
 }
 
-/*
-  Release all resources used by the NodeArray
-
-  NodeArray *node_array  ->  NodeArray to free
-*/
+/**
+ * @brief Release all resources used by the node array
+ * 
+ * @param node_array Node array to free
+ */
 void NodeArray_free(NodeArray *node_array) {
     free(node_array->array);
     node_array->array = NULL;
@@ -887,12 +900,12 @@ void NodeArray_free(NodeArray *node_array) {
     free(node_array);
 }
 
-/*
-  Append a Node to NodeArray
-
-  NodeArray *node_array  ->  NodeArray to append to
-  Node *node             ->  Node to append
-*/
+/**
+ * @brief Append a node to node array
+ * 
+ * @param node_array Node array to append to
+ * @param node Node to append
+ */
 void NodeArray_append(NodeArray *node_array, Node *node) {
     if (node_array->used == node_array->size) {
         node_array->size *= 2;
@@ -903,6 +916,7 @@ void NodeArray_append(NodeArray *node_array, Node *node) {
 }
 
 
+//TODO: organize forward declerations, or include the header first
 DeclType get_decltype(u32char *tokenval);
 
 Node *parse_expr(TokenArray *tokens);
@@ -924,11 +938,12 @@ size_t _last_token_count = 0;
 int _body_count = 0;
 
 
-/*
-  Parse an enumeration body and return a Node object
-
-  TokenArray *tokens  ->  TokenArray to parse
-*/
+/**
+ * @brief Parse an enumeration body
+ * 
+ * @param tokens Token array to parse
+ * @return Node's pointer
+ */
 Node *parse_enum(TokenArray *tokens) {
     size_t i = 0;
     NodeArray *node_array = NodeArray_new(1);
@@ -995,11 +1010,12 @@ Node *parse_enum(TokenArray *tokens) {
 }
 
 
-/*
-  Parse a body and return a Node object
-
-  TokenArray *tokens  ->  TokenArray to parse
-*/
+/**
+ * @brief Parse a body
+ * 
+ * @param tokens Token array to parse
+ * @return Node's pointer
+ */
 Node *parse_body(TokenArray *tokens) {
     size_t i = 0;
     NodeArray *node_array = NodeArray_new(1);
@@ -1750,11 +1766,12 @@ Node *parse_expr_EXPR(TokenArray *tokens) {
     return left;
 }
 
-/*
-  Parse an expression and return a Node object
-
-  TokenArray *tokens  ->  TokenArray to parse
-*/
+/**
+ * @brief Parse an expression
+ * 
+ * @param tokens Token array to parse
+ * @return Node's pointer
+ */
 Node *parse_expr(TokenArray *tokens) {
     Node *expr = parse_expr_EXPR(tokens);
     _last_token_count = _token_index+1;

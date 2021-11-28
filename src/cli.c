@@ -122,7 +122,7 @@ int main(int argc, char *argv[]) {
         printf("Dust version : 0.0.16\n"
                 "GCC version  : %s\n"
                 "Platform     : %s\n",
-                get_gcc_version(), utf32_to_utf8(platform.prettyname));
+                utf32_to_ascii(get_gcc_version()), utf32_to_utf8(platform.prettyname));
     }
     else if (ap->cmd == cmd_tokenize) {
         TokenArray *tokens = TokenArray_new(1);
