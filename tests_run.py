@@ -8,18 +8,18 @@
 
 
   Dust tester script
-  ----------------------------
+  -------------------------------------------------------
   This Python script is used to test various Dust library
   functions using `tests.c`
   This script must be run in the same directory as Dust. 
 
 """
 
-
 import os
 import time
 import platform
 import subprocess
+
 
 print("\nRunning tests...\n")
 

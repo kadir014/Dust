@@ -5,12 +5,13 @@ dev/
 dust-ws.code-workspace
 dust.exe
 
-deneme.c
-deneme.exe
-deneme.py
-
+deneme/
 sample.dust
 sample2.dust
+
+src_old/
+include_old/
+build_old.py
 
 tests.exe
 

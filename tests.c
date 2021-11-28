@@ -173,6 +173,7 @@ u8char *test_tokenizer__TokenArray_append() {
   - test NodeElse_new
   - test NodeRepeat_new
   - test NodeWhile_new
+  - test NodeFor_new
 */
 u8char *test_parser__Node_new() {
     _TESTS++;

@@ -8,9 +8,13 @@
 
 */
 
+#pragma once
 #ifndef TOKENIZER_H
 #define TOKENIZER_H
 
+
+#include <stdlib.h>
+#include <dust/ustring.h>
 
 typedef enum {
     TokenType_IDENTIFIER,
@@ -31,15 +35,15 @@ typedef enum {
 
 typedef struct {
     TokenType type;
-    wchar_t *data;
+    u32char *data;
     int x, y;
 } Token;
 
-Token *Token_new(TokenType type, wchar_t *data);
+Token *Token_new(TokenType type, u32char *data);
 
 void Token_free(Token *token);
 
-wchar_t *Token_repr(Token *token);
+u32char *Token_repr(Token *token);
 
 typedef struct {
     Token *array;
@@ -57,9 +61,9 @@ TokenArray *TokenArray_slice(TokenArray *token_array, int index);
 
 TokenArray *TokenArray_slicet(TokenArray *token_array, int index);
 
-wchar_t *TokenArray_repr(TokenArray *token_array);
+u32char *TokenArray_repr(TokenArray *token_array);
 
-TokenArray *tokenize(wchar_t *raw);
+TokenArray *tokenize(u32char *raw);
 
 TokenArray *tokenize_file(char *filepath);
 

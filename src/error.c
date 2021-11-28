@@ -10,7 +10,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "dust/u8string.h"
+#include "dust/ustring.h"
 #include "dust/ansi.h"
 
 
@@ -21,38 +21,38 @@ typedef enum {
 
 int ERROR_ANSI = 1;
 
-void raise_ansi(ErrorType type, u8char *message, u8char *source, int x, int y) {
-    u8char *type_repr;
+void raise_ansi(ErrorType type, u32char *message, u32char *source, int x, int y) {
+    u32char *type_repr;
     switch (type) {
         case ErrorType_Syntax:
             type_repr = L"SyntaxError";
             break;
     }
 
-    wprintf(L"\n%ls %ls%d%ls:%ls%d\n%ls%ls%ls: %ls%ls\n%ls...\n#%d %lsline\n",
-            source, ANSI_FG_YELLOW, x, ANSI_END, ANSI_FG_YELLOW, (y+1),
-            ANSI_FG_LIGHTRED, type_repr, ANSI_FG_DARKGRAY, ANSI_END, message,
-            ANSI_FG_DARKGRAY, (y+1),
-            ANSI_END);
+    printf("\n%ls %ls%d%ls:%ls%d\n%ls%ls%ls: %ls%ls\n%ls...\n#%d %lsline\n",
+           source, ANSI_FG_YELLOW, x, ANSI_END, ANSI_FG_YELLOW, (y+1),
+           ANSI_FG_LIGHTRED, type_repr, ANSI_FG_DARKGRAY, ANSI_END, message,
+           ANSI_FG_DARKGRAY, (y+1),
+           ANSI_END);
             
     exit(1);
 }
 
-void raise_noansi(ErrorType type, u8char *message, u8char *source, int x, int y) {
-    u8char *type_repr;
+void raise_noansi(ErrorType type, u32char *message, u32char *source, int x, int y) {
+    u32char *type_repr;
     switch (type) {
         case ErrorType_Syntax:
             type_repr = L"SyntaxError";
             break;
     }
 
-    wprintf(L"\n%ls %d:%d\n%ls: %ls\n...\n#%d line\n",
-            source, x, (y+1), type_repr, message, (y+1));
+    printf("\n%ls %d:%d\n%ls: %ls\n...\n#%d line\n",
+           source, x, (y+1), type_repr, message, (y+1));
             
     exit(1);
 }
 
-void raise(ErrorType type, u8char *message, u8char *source, int x, int y) {
+void raise(ErrorType type, u32char *message, u32char *source, int x, int y) {
     switch (ERROR_ANSI) {
         case 1:
             raise_ansi(type, message, source, x, y);
@@ -64,7 +64,7 @@ void raise(ErrorType type, u8char *message, u8char *source, int x, int y) {
     }
 }
 
-void raise_internal(u8char *message) {
+void raise_internal(u32char *message) {
     switch (ERROR_ANSI) {
         case 1:
             wprintf(L"%lsInternalError%ls:%ls %ls",

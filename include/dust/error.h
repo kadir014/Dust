@@ -8,11 +8,12 @@
 
 */
 
+#pragma once
 #ifndef ERRORHANDLING_H
 #define ERRORHANDLING_H
 
 
-#include "dust/u8string.h"
+#include "dust/ustring.h"
 
 
 typedef enum {
@@ -22,13 +23,13 @@ typedef enum {
 
 extern int ERROR_ANSI;
 
-void raise_ansi(ErrorType type, u8char *message, u8char *source, int x, int y);
+void raise_ansi(ErrorType type, u32char *message, u32char *source, int x, int y);
 
-void raise_noansi(ErrorType type, u8char *message, u8char *source, int x, int y);
+void raise_noansi(ErrorType type, u32char *message, u32char *source, int x, int y);
 
-void raise(ErrorType type, u8char *message, u8char *source, int x, int y);
+void raise(ErrorType type, u32char *message, u32char *source, int x, int y);
 
-void raise_internal(u8char *message);
+void raise_internal(u32char *message);
 
 
 #endif

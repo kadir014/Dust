@@ -8,9 +8,14 @@
 
 */
 
+#pragma once
 #ifndef PARSER_H
 #define PARSER_H
 
+
+#include <stdlib.h>
+#include "dust/ustring.h"
+#include "dust/tokenizer.h"
 
 typedef enum {
     NodeType_INTEGER,
@@ -94,18 +99,18 @@ struct _Node {
 
         double floating;
 
-        u8char *string;
+        u32char *string;
 
-        u8char *variable;
+        u32char *variable;
 
         struct {
             DeclType decl_type;
-            u8char *decl_var;
+            u32char *decl_var;
             struct _Node *decl_expr;
         };
 
         struct {
-            u8char *assign_var;
+            u32char *assign_var;
             struct _Node *assign_expr;
         };
 
@@ -114,7 +119,7 @@ struct _Node {
             NodeArray *call_args;
         };
 
-        u8char *func_base;
+        u32char *func_base;
 
         struct {
             OpType bin_optype;
@@ -128,8 +133,8 @@ struct _Node {
         };
 
         struct {
-            u8char *import_module;
-            u8char *import_member;
+            u32char *import_module;
+            u32char *import_member;
         };
 
         struct {
@@ -143,7 +148,7 @@ struct _Node {
         };
 
         struct {
-            u8char *enum_name;
+            u32char *enum_name;
             struct _Node *enum_body;
         };
 
@@ -173,6 +178,12 @@ struct _Node {
             struct _Node *while_expr;
             struct _Node *while_body;
         };
+        
+        struct {
+            struct _Node *for_var;
+            struct _Node *for_expr;
+            struct _Node *for_body;
+        };
     };
 };
 typedef struct _Node Node;
@@ -181,31 +192,31 @@ Node *NodeInteger_new(long integer);
 
 Node *NodeFloat_new(double floating);
 
-Node *NodeString_new(u8char *str);
+Node *NodeString_new(u32char *str);
 
 Node *NodeCall_new(Node *call_base);
 
-Node *NodeFuncBase_new(u8char *func_base);
+Node *NodeFuncBase_new(u32char *func_base);
 
-Node *NodeVar_new(u8char *variable);
+Node *NodeVar_new(u32char *variable);
 
-Node *NodeDecl_new(DeclType type, u8char *variable, Node *expression);
+Node *NodeDecl_new(DeclType type, u32char *variable, Node *expression);
 
-Node *NodeAssign_new(u8char *variable, Node *expression);
+Node *NodeAssign_new(u32char *variable, Node *expression);
 
 Node *NodeBinOp_new(OpType op, Node *left, Node *right);
 
 Node *NodeUnaryOp_new(OpType op, Node *right);
 
-Node *NodeImport_new(u8char *module);
+Node *NodeImport_new(u32char *module);
 
-Node *NodeImportFrom_new(u8char *module, u8char *member);
+Node *NodeImportFrom_new(u32char *module, u32char *member);
 
 Node *NodeSubscript_new(Node *snode, Node *expr);
 
 Node *NodeChild_new(Node *parent, Node *child);
 
-Node *NodeEnum_new(u8char *name, Node *body);
+Node *NodeEnum_new(u32char *name, Node *body);
 
 Node *NodeBody_new(NodeArray *node_array, int tokens);
 
@@ -219,9 +230,11 @@ Node *NodeRepeat_new(Node *expression, Node *body);
 
 Node *NodeWhile_new(Node *expression, Node *body);
 
+Node *NodeFor_new(Node *var, Node *iterator, Node *body);
+
 void Node_free(Node *node);
 
-u8char *Node_repr(Node *node, int ident);
+u32char *Node_repr(Node *node, int ident);
 
 NodeArray *NodeArray_new(size_t def_size);
 

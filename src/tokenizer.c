@@ -10,9 +10,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <wchar.h>
-#include <wctype.h>
-#include "dust/u8string.h"
+#include "dust/ustring.h"
 #include "dust/error.h"
 
 
@@ -34,24 +32,26 @@ typedef enum {
 } TokenType;
 
 
-/*
-  TokenType type  ->  Type of the token
-  u8char *data    ->  Token's data
-  int x, y        ->  Corresponding position of Token in file
-*/
+/**
+ * @param type Type of the token
+ * @param data Token's data
+ * @param xy Corresponding position of token in file
+ */
 typedef struct {
     TokenType type;
-    u8char *data;
+    u32char *data;
     int x, y;
 } Token;
 
-/*
-  Create a new Token and return its pointer
 
-  TokenType type  ->  Type of the Token
-  char *data      ->  String data the Token holds
-*/
-Token *Token_new(TokenType type, u8char *data) {
+/**
+ * @brief Create a new token
+ * 
+ * @param type Type of the token
+ * @param data String data that token holds
+ * @return Token's pointer
+ */
+Token *Token_new(TokenType type, u32char *data) {
     Token *token = (Token *)malloc(sizeof(Token));
     
     token->type = type;
@@ -62,84 +62,86 @@ Token *Token_new(TokenType type, u8char *data) {
     return token;
 }
 
-/*
-  Release all resources used by the Token
-
-  Token *token  ->  Token to free
-*/
+/**
+ * @brief Release all resources used by the token
+ * 
+ * @param token Token to free
+ */
 void Token_free(Token *token) {
     free(token->data);
     free(token);
 }
 
-/*
-  Return a string representation of Token
-
-  Token *token  ->  Token to return a repr. string of
-*/
-u8char *Token_repr(Token *token) {
+/**
+ * @brief Represent token as string
+ * 
+ * @param token Token to return a repr. string of
+ * @return String representation
+ */
+u32char *Token_repr(Token *token) {
     switch (token->type) {
         case TokenType_IDENTIFIER:
-            return u8join(L"TokenType_IDENTIFIER   ", token->data);
+            return u32join(U"TokenType_IDENTIFIER   ", token->data);
 
         case TokenType_STRING:
-            return u8join(L"TokenType_STRING       ", token->data);
+            return u32join(U"TokenType_STRING       ", token->data);
 
         case TokenType_OPERATOR:
-            return u8join(L"TokenType_OPERATOR     ", token->data);
+            return u32join(U"TokenType_OPERATOR     ", token->data);
 
         case TokenType_NUMERIC:
-            return u8join(L"TokenType_NUMERIC      ", token->data);
+            return u32join(U"TokenType_NUMERIC      ", token->data);
 
         case TokenType_COMMA:
-            return u8join(L"TokenType_COMMA        ", token->data);
+            return u32join(U"TokenType_COMMA        ", token->data);
 
         case TokenType_PERIOD:
-            return u8join(L"TokenType_PERIOD       ", token->data);
+            return u32join(U"TokenType_PERIOD       ", token->data);
 
         case TokenType_LPAREN:
-            return u8join(L"TokenType_LPAREN       ", token->data);
+            return u32join(U"TokenType_LPAREN       ", token->data);
 
         case TokenType_RPAREN:
-            return u8join(L"TokenType_RPAREN       ", token->data);
+            return u32join(U"TokenType_RPAREN       ", token->data);
 
         case TokenType_LCURLY:
-            return u8join(L"TokenType_LCURLY       ", token->data);
+            return u32join(U"TokenType_LCURLY       ", token->data);
 
         case TokenType_RCURLY:
-            return u8join(L"TokenType_RCURLY       ", token->data);
+            return u32join(U"TokenType_RCURLY       ", token->data);
 
         case TokenType_LSQRB:
-            return u8join(L"TokenType_LSQRB        ", token->data);
+            return u32join(U"TokenType_LSQRB        ", token->data);
 
         case TokenType_RSQRB:
-            return u8join(L"TokenType_RSQRB        ", token->data);
+            return u32join(U"TokenType_RSQRB        ", token->data);
 
         case TokenType_NEXTSTM:
-            return u8join(L"TokenType_NEXTSTM      ", token->data);
+            return u32join(U"TokenType_NEXTSTM      ", token->data);
 
         case TokenType_EOF:
-            return u8join(L"TokenType_EOF          ", token->data);
+            return u32join(U"TokenType_EOF          ", token->data);
     }
 }
 
 
-/*
-  Token *array  ->  Array of Tokens
-  size_t size   ->  Default Size
-  size_t used   ->  Length of the array
-*/
+/**
+ * @param array Token array
+ * @param size Default size
+ * @param used Length of the array
+ */
 typedef struct {
     Token *array;
     size_t size;
     size_t used;
 } TokenArray;
 
-/*
-  Create a new TokenArray and return its pointer
-
-  unsigned short def_size  ->  Initial size of the array
-*/
+/**
+ * @brief Create a new token array
+ * 
+ * @param def_size  Initial size of the array
+ * @return Token array's pointer
+ */
 TokenArray *TokenArray_new(size_t def_size) {
     TokenArray *token_array = (TokenArray *)malloc(sizeof(TokenArray));
 
@@ -150,11 +152,11 @@ TokenArray *TokenArray_new(size_t def_size) {
     return token_array;
 }
 
-/*
-  Release all resources used by the TokenArray
-
-  TokenArray *token_array  ->  TokenArray to free
-*/
+/**
+ * @brief Release all resources used by the token array
+ * 
+ * @param token_array Token array to free
+ */
 void TokenArray_free(TokenArray *token_array) {
     free(token_array->array);
     token_array->array = NULL;
@@ -163,12 +165,12 @@ void TokenArray_free(TokenArray *token_array) {
     free(token_array);
 }
 
-/*
-  Append a Token to TokenArray
-
-  TokenArray *token_array  ->  TokenArray to append to
-  Token *Token             ->  Token to append
-*/
+/**
+ * @brief Append a token to token array
+ * 
+ * @param token_array Token array to append to
+ * @param token Token to append
+ */
 void TokenArray_append(TokenArray *token_array, Token *token) {
     if (token_array->used == token_array->size) {
         token_array->size *= 2;
@@ -178,12 +180,13 @@ void TokenArray_append(TokenArray *token_array, Token *token) {
     token_array->array[token_array->used++] = *token;
 }
 
-/*
-  Append a sliced copy of TokenArray
-
-  TokenArray *token_array  ->  TokenArray to slice
-  int index            ->  Index to slice from
-*/
+/**
+ * @brief Get a slice of the token array
+ * 
+ * @param token_array Token array to slice
+ * @param index Index to start slicing from
+ * @return Sliced token array's pointer
+ */
 TokenArray *TokenArray_slice(TokenArray *token_array, int index) {
     TokenArray *slice_array = TokenArray_new(1);
 
@@ -195,12 +198,13 @@ TokenArray *TokenArray_slice(TokenArray *token_array, int index) {
     return slice_array;
 }
 
-/*
-  Append a sliced copy of TokenArray
-
-  TokenArray *token_array  ->  TokenArray to slice
-  int index            ->  Index to slice from
-*/
+/**
+ * @brief Get a slice of the token array
+ * 
+ * @param token_array Token array to slice
+ * @param index Index to start slicing from
+ * @return Sliced token array's pointer
+ */
 TokenArray *TokenArray_slicet(TokenArray *token_array, int index) {
     TokenArray *slice_array = TokenArray_new(1);
 
@@ -214,29 +218,30 @@ TokenArray *TokenArray_slicet(TokenArray *token_array, int index) {
     return slice_array;
 }
 
-/*
-  Return a string representation of TokenArray
-
-  TokenArray *token_array  ->  TokenArray to return a repr. string of
-*/
-u8char *TokenArray_repr(TokenArray *token_array) {
+/**
+ * @brief Represent token array as string
+ * 
+ * @param token_array Token array to return a repr. string of
+ * @return Representation string
+ */
+u32char *TokenArray_repr(TokenArray *token_array) {
     unsigned short i = 0;
-    u8char *finalstr = L"";
+    u32char *finalstr = U"";
     for (i = 0; i < token_array->used; ++i) {
-        finalstr = u8join(u8join(finalstr, Token_repr( &(token_array->array[i]) )), L"\n");
+        finalstr = u32join(u32join(finalstr, Token_repr( &(token_array->array[i]) )), U"\n");
     }
 
     return finalstr;
 }
 
 
-/*
-  Helper function to tokenize
-*/
+/**
+ * @brief Helper function to tokenize
+ */
 void tokenize_append(Token* token, TokenArray *tokens, int x, int y) {
-    u8char *t = u8replace(u8strip(token->data), L"\n", L"");
+    u32char *t = u32replace(u32strip(token->data), U"\n", U"");
 
-    if (u8isdigit(t)) {
+    if (u32isdigit(t)) {
         token->type = TokenType_NUMERIC;
         token->data = t;
         token->x = x;
@@ -244,16 +249,16 @@ void tokenize_append(Token* token, TokenArray *tokens, int x, int y) {
         TokenArray_append(tokens, token);
     }
 
-    else if (u8isequal(t, L"(") || u8isequal(t, L")") || u8isequal(t, L"[") ||
-             u8isequal(t, L"]") || u8isequal(t, L"{") || u8isequal(t, L"}")) {
+    else if (u32isequal(t, U"(") || u32isequal(t, U")") || u32isequal(t, U"[") ||
+             u32isequal(t, U"]") || u32isequal(t, U"{") || u32isequal(t, U"}")) {
                 
                 switch (t[0]) {
-                        case L'(': token->type = TokenType_LPAREN; break;
-                        case L')': token->type = TokenType_RPAREN; break;
-                        case L'[': token->type = TokenType_LSQRB;  break;
-                        case L']': token->type = TokenType_RSQRB;  break;
-                        case L'{': token->type = TokenType_LCURLY; break;
-                        case L'}': token->type = TokenType_RCURLY; break;
+                        case U'(': token->type = TokenType_LPAREN; break;
+                        case U')': token->type = TokenType_RPAREN; break;
+                        case U'[': token->type = TokenType_LSQRB;  break;
+                        case U']': token->type = TokenType_RSQRB;  break;
+                        case U'{': token->type = TokenType_LCURLY; break;
+                        case U'}': token->type = TokenType_RCURLY; break;
                     }
                 token->data = t;
                 token->x = x;
@@ -262,24 +267,25 @@ void tokenize_append(Token* token, TokenArray *tokens, int x, int y) {
                 TokenArray_append(tokens, token);
     }
 
-    else if (wcslen(t) > 0) {
-        if (!u8isidentifier(t)) {
-            printf("%d\n", u8isidentifier(t));
-            printf("%lc %d\n", t[0], !!iswalnum(t[0]));
-            printf("%lc %d\n", t[1], !!iswalnum(t[1]));
-            printf("%lc %d\n", t[2], !!iswalnum(t[2]));
-            printf("%lc %d\n", t[3], !!iswalnum(t[3]));
-            printf("%lc %d\n", t[4], !!iswalnum(t[4]));
-            printf("%lc %d\n", t[5], !!iswalnum(t[5]));
-            u8char *errmsg = u8join(u8join(L"Invalid identifier '", t), L"'");
-            raise(ErrorType_Syntax, errmsg, L"<raw>", x, y);
-        }
+    else if (u32len(t) > 0) {
+        //! what is this part?
+        // if (!u32isidentifier(t)) {
+        //     printf(U"%d\n", u32isidentifier(t));
+        //     printf(U"%lc %d\n", t[0], !!iswalnum(t[0]));
+        //     printf(U"%lc %d\n", t[1], !!iswalnum(t[1]));
+        //     printf(U"%lc %d\n", t[2], !!iswalnum(t[2]));
+        //     printf(U"%lc %d\n", t[3], !!iswalnum(t[3]));
+        //     printf(U"%lc %d\n", t[4], !!iswalnum(t[4]));
+        //     printf(U"%lc %d\n", t[5], !!iswalnum(t[5]));
+        //     u32char *errmsg = u32join(u32join(U"Invalid identifier '", t), U"'");
+        //     raise(ErrorType_Syntax, errmsg, U"<raw>", x, y);
+        // }
 
         token->type = TokenType_IDENTIFIER;
         
-        if (u8isequal(t, L"and") || u8isequal(t, L"or")  ||
-            u8isequal(t, L"xor") || u8isequal(t, L"not") ||
-            u8isequal(t, L"has")) {
+        if (u32isequal(t, U"and") || u32isequal(t, U"or")  ||
+            u32isequal(t, U"xor") || u32isequal(t, U"not") ||
+            u32isequal(t, U"has")) {
                 token->type = TokenType_OPERATOR;
             }
 
@@ -291,120 +297,120 @@ void tokenize_append(Token* token, TokenArray *tokens, int x, int y) {
     }
 }
 
-/*
-  Tokenize/lex a source code of string
-
-  char *raw  ->  String to tokenize
-*/
-TokenArray *tokenize(u8char *raw){
+/**
+ * @brief Tokenize a source code of string
+ * 
+ * @param raw String to tokenize
+ * @return Token array's pointer
+ */
+TokenArray *tokenize(u32char *raw){
     TokenArray *tokens = TokenArray_new(1);
-    raw = u8replace(u8strip(raw), L"\n", L"");
-    if (wcslen(raw) == 0) return tokens;
-    Token *token = Token_new(TokenType_EOF, L"");
+    raw = u32replace(u32strip(raw), U"\n", U"");
+    if (u32len(raw) == 0) return tokens;
+    Token *token = Token_new(TokenType_EOF, U"");
 
     int x = 0;
     int y = 0;
-    u8char chr = L'\0';
+    u32char chr = U'\0';
     int i = 0;
-    u8char string_type = L'\0';
+    u32char string_type = U'\0';
 
-    while (i < wcslen(raw) && raw[i] != EOF) {
+    while (i < u32len(raw) && raw[i] != EOF) {
         chr = raw[i];
 
-        if (chr == L'"' || chr == L'\'') {
+        if (chr == U'"' || chr == U'\'') {
             string_type = chr;
-            chr = L'\0';
-            token->data = L"";
+            chr = U'\0';
+            token->data = U"";
 
             while (chr != string_type) {
                 i++;
                 x++;
 
-                if (i > wcslen(raw)) {
-                    raise(ErrorType_Syntax, L"String not closed", L"<raw>", x, y);
+                if (i > u32len(raw)) {
+                    raise(ErrorType_Syntax, U"String not closed", U"<raw>", x, y);
                 }
 
                 if (raw[i] == string_type) break;
                 chr = raw[i];
-                u8char chrstr[2];
-                token->data = u8join(token->data, u8char_to_u8string(&chr, chrstr));
+                token->data = u32pushl(token->data, chr);
             }
 
             token->type = TokenType_STRING;
-            token->x = x - wcslen(token->data) - 1;
+            token->x = x - u32len(token->data) - 1;
             token->y = y;
 
             TokenArray_append(tokens, token);
-            token = Token_new(TokenType_EOF, L"");
+            token = Token_new(TokenType_EOF, U"");
 
             i++;
             x++;
             continue;
         }
 
-        if (chr == L'\n') {
+        if (chr == U'\n') {
             x = 0;
             y++;
         }
 
-        else if (chr == L' ') {
-            if (wcslen(token->data) > 0) {
+        else if (chr == U' ') {
+            if (u32len(token->data) > 0) {
                 tokenize_append(token, tokens, x, y);
-                token = Token_new(TokenType_EOF, L"");
+                token = Token_new(TokenType_EOF, U"");
             }
             i++;
             x++;
             continue;
         }
 
-        else if (chr == L'+' || chr == L'-' || chr == L'*' ||
-                 chr == L'/' || chr == L'^' || chr == L'=' ||
-                 chr == L'>' || chr == L'<' || chr == L'!') {
+        else if (chr == U'+' || chr == U'-' || chr == U'*' ||
+                 chr == U'/' || chr == U'^' || chr == U'=' ||
+                 chr == U'>' || chr == U'<' || chr == U'!') {
 
-                    if (wcslen(token->data) > 0) {
+                    if (u32len(token->data) > 0) {
                         tokenize_append(token, tokens, x, y);
-                        token = Token_new(TokenType_EOF, L"");
+                        token = Token_new(TokenType_EOF, U"");
                     }
 
-                    if (chr == L'=' && raw[i+1] == L'=') {
-                        token->data = L"==";
+                    if (chr == U'=' && raw[i+1] == U'=') {
+                        token->data = U"==";
                         i++;
                     }
-                    else if (chr == L'+' && raw[i+1] == L'=') {
-                        token->data = L"+=";
+                    else if (chr == U'+' && raw[i+1] == U'=') {
+                        token->data = U"+=";
                         i++;
                     }
-                    else if (chr == L'-' && raw[i+1] == L'=') {
-                        token->data = L"-=";
+                    else if (chr == U'-' && raw[i+1] == U'=') {
+                        token->data = U"-=";
                         i++;
                     }
-                    else if (chr == L'*' && raw[i+1] == L'=') {
-                        token->data = L"*=";
+                    else if (chr == U'*' && raw[i+1] == U'=') {
+                        token->data = U"*=";
                         i++;
                     }
-                    else if (chr == L'/' && raw[i+1] == L'=') {
-                        token->data = L"/=";
+                    else if (chr == U'/' && raw[i+1] == U'=') {
+                        token->data = U"/=";
                         i++;
                     }
-                    else if (chr == L'^' && raw[i+1] == L'=') {
-                        token->data = L"^=";
+                    else if (chr == U'^' && raw[i+1] == U'=') {
+                        token->data = U"^=";
                         i++;
                     }
-                    else if (chr == L'<' && raw[i+1] == L'=') {
-                        token->data = L"<=";
+                    else if (chr == U'<' && raw[i+1] == U'=') {
+                        token->data = U"<=";
                         i++;
                     }
-                    else if (chr == L'>' && raw[i+1] == L'=') {
-                        token->data = L">=";
+                    else if (chr == U'>' && raw[i+1] == U'=') {
+                        token->data = U">=";
                         i++;
                     }
-                    else if (chr == L'!' && raw[i+1] == L'=') {
-                        token->data = L"!=";
+                    else if (chr == U'!' && raw[i+1] == U'=') {
+                        token->data = U"!=";
                         i++;
                     }
                     else {
-                        u8char chrstr[2];
-                        token->data = u8join(L"", u8char_to_u8string(&chr, chrstr));
+                        token->data = u32pushl(token->data, chr);
+                        //token->data = u32join(U"", u32char_to_u32string(&chr, chrstr));
                     }
 
                     token->type = TokenType_OPERATOR;
@@ -412,159 +418,141 @@ TokenArray *tokenize(u8char *raw){
                     token->y = y;
                     
                     TokenArray_append(tokens, token);
-                    token = Token_new(TokenType_EOF, L"");
+                    token = Token_new(TokenType_EOF, U"");
 
                     i++;
                     x++;
                     continue;
                 }
 
-        else if (chr == L'(' || chr == L')' || chr == L'[' ||
-                 chr == L']' || chr == L'{' || chr == L'}') {
+        else if (chr == U'(' || chr == U')' || chr == U'[' ||
+                 chr == U']' || chr == U'{' || chr == U'}') {
 
-                    if (wcslen(token->data) > 0) {
+                    if (u32len(token->data) > 0) {
                         tokenize_append(token, tokens, x, y);
-                        token = Token_new(TokenType_EOF, L"");
+                        token = Token_new(TokenType_EOF, U"");
                     }
 
                     switch (chr) {
-                        case L'(': token->type = TokenType_LPAREN; break;
-                        case L')': token->type = TokenType_RPAREN; break;
-                        case L'[': token->type = TokenType_LSQRB;  break;
-                        case L']': token->type = TokenType_RSQRB;  break;
-                        case L'{': token->type = TokenType_LCURLY; break;
-                        case L'}': token->type = TokenType_RCURLY; break;
+                        case U'(': token->type = TokenType_LPAREN; break;
+                        case U')': token->type = TokenType_RPAREN; break;
+                        case U'[': token->type = TokenType_LSQRB;  break;
+                        case U']': token->type = TokenType_RSQRB;  break;
+                        case U'{': token->type = TokenType_LCURLY; break;
+                        case U'}': token->type = TokenType_RCURLY; break;
                     }
-                    u8char chrstr[2];
-                    token->data = u8join(L"", u8char_to_u8string(&chr, chrstr));
+                    token->data = u32pushl(token->data, chr);
                     token->x = x;
                     token->y = y;
 
                     TokenArray_append(tokens, token);
-                    token = Token_new(TokenType_EOF, L"");
+                    token = Token_new(TokenType_EOF, U"");
 
                     i++;
                     x++;
                     continue;
                  }
 
-        else if (chr == L',') {
-            if (wcslen(token->data) > 0) {
+        else if (chr == U',') {
+            if (u32len(token->data) > 0) {
                 tokenize_append(token, tokens, x, y);
-                token = Token_new(TokenType_EOF, L"");
+                token = Token_new(TokenType_EOF, U"");
             }
 
             token->type = TokenType_COMMA;
-            u8char chrstr[2];
-            token->data = u8join(L"", u8char_to_u8string(&chr, chrstr));
+            token->data = u32pushl(token->data, chr);
             token->x = x;
             token->y = y;
 
             TokenArray_append(tokens, token);
-            token = Token_new(TokenType_EOF, L"");
+            token = Token_new(TokenType_EOF, U"");
 
             i++;
             x++;
             continue;
         }
 
-        else if (chr == L'.') {
-            if (wcslen(token->data) > 0) {
+        else if (chr == U'.') {
+            if (u32len(token->data) > 0) {
                 tokenize_append(token, tokens, x, y);
-                token = Token_new(TokenType_EOF, L"");
+                token = Token_new(TokenType_EOF, U"");
             }
 
-            if (raw[i+1] == L'.') {
+            if (raw[i+1] == U'.') {
                 token->type = TokenType_OPERATOR;
-                token->data = L"..";
+                token->data = U"..";
                 i++;
             }
             else {
                 token->type = TokenType_PERIOD;
-                u8char chrstr[2];
-                token->data = u8join(L"", u8char_to_u8string(&chr, chrstr));
+                token->data = u32pushl(token->data, chr);
             }
             token->x = x;
             token->y = y;
 
             TokenArray_append(tokens, token);
-            token = Token_new(TokenType_EOF, L"");
+            token = Token_new(TokenType_EOF, U"");
 
             i++;
             x++;
             continue;
         }
 
-        else if (chr == L';') {
-            if (wcslen(token->data) > 0) {
+        else if (chr == U';') {
+            if (u32len(token->data) > 0) {
                 tokenize_append(token, tokens, x, y);
-                token = Token_new(TokenType_EOF, L"");
+                token = Token_new(TokenType_EOF, U"");
             }
 
             token->type = TokenType_NEXTSTM;
-            token->data = L"";
+            token->data = U"";
             token->x = x;
             token->y = y;
 
             TokenArray_append(tokens, token);
-            token = Token_new(TokenType_EOF, L"");
+            token = Token_new(TokenType_EOF, U"");
 
             i++;
             x++;
             continue;
         }
 
-        u8char chrstr[2];
-        token->data = u8join(token->data, u8char_to_u8string(&chr, chrstr));
+        token->data = u32pushl(token->data, chr);
         x++;
         i++;
     }
 
-    if (wcslen(token->data) > 0) {
+    if (u32len(token->data) > 0) {
         tokenize_append(token, tokens, x, y);
     }
     
     // Change last NEXTSTM token to EOF token
     if (tokens->array[tokens->used - 1].type == TokenType_NEXTSTM) {
-        tokens->array[tokens->used - 1] = *Token_new(TokenType_EOF, L"");
+        tokens->array[tokens->used - 1] = *Token_new(TokenType_EOF, U"");
     }
     // Add EOF token if necessary
     else if (tokens->array[tokens->used - 1].type == TokenType_RCURLY) {
-        TokenArray_append(tokens, Token_new(TokenType_EOF, L""));
+        TokenArray_append(tokens, Token_new(TokenType_EOF, U""));
     }
     else {
-        raise(ErrorType_Syntax, L"Expected ;", L"<raw>",
-            tokens->array[tokens->used - 1].x,
-            tokens->array[tokens->used - 1].y);
+        raise(ErrorType_Syntax, U"Expected ;", U"<raw>",
+           tokens->array[tokens->used - 1].x,
+           tokens->array[tokens->used - 1].y);
     }
 
     return tokens;
 }
 
-/*
-  Tokenize/lex a source code in file
-
-  char *filepath  ->  Path of the file to tokenize
-*/
+/**
+ * @brief Tokenize a source code in file
+ * 
+ * @param filepath Path of the file to tokenize
+ * @return Token array's pointer
+ */
 TokenArray *tokenize_file(char *filepath) {
-    FILE *f = fopen(filepath, "r,ccs=UTF-8");
-    fseek(f, 0, SEEK_END);
-    long fsize = ftell(f);
-    fseek(f, 0, SEEK_SET);
+    u32char *filecontent = u32readfile(filepath);
 
-    u8char *buffer = L"";
-    u8char *altbuffer = (u8char *)malloc(fsize*sizeof(u8char));
-
-    while (fgetws(altbuffer, fsize, f) != NULL) {
-        buffer = u8join(buffer, altbuffer);
-    }
-
-    fclose(f);
-    free(altbuffer);
-
-    if (buffer) {
-        TokenArray *token_array = tokenize(buffer);
-        free(buffer);
-        return token_array;
-    }
+    TokenArray *token_array = tokenize(filecontent);
+    free(filecontent);
+    return token_array;
 }
