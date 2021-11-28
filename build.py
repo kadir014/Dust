@@ -108,6 +108,7 @@ class OptionHandler:
         self.gcc_args = [] # GCC arguments
 
         if platform.system() == "Windows": self.gcc_args.append("-lws2_32")
+        else: self.gcc_args.append("-lm")
 
     def add_option(self, opt: str):
         if opt.startswith("-j"):
