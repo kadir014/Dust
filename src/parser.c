@@ -1761,16 +1761,3 @@ Node *parse_expr(TokenArray *tokens) {
     _token_index = 0;
     return expr;
 }
-
-
-int main() {
-    u32char raw[99] = U"string a = 'UTF-8 works! 🔥😀'";
-
-    TokenArray *tarr = tokenize(raw);
-
-    printf("%s\n", utf32_to_utf8(TokenArray_repr(tarr)));
-
-    Node *parsed = parse_body(tarr);
-
-    printf("%s\n", utf32_to_utf8(Node_repr(parsed, 0)));
-}

@@ -64,15 +64,21 @@ FINAL_BUILD = "dust.exe" if platform.system() == "Windows" else "dust"
 DUST_PATH = pathlib.Path(os.getcwd())
 
 SOURCE_FILES = [
-    DUST_PATH / "src_a" / "tokenizer.c",
-    DUST_PATH / "src_a" / "ustring.c",
-    DUST_PATH / "src_a" / "error.c",
-    DUST_PATH / "src_a" / "parser.c",
-    DUST_PATH / "include_a" / "dust" / "tokenizer.h",
-    DUST_PATH / "include_a" / "dust" / "ustring.h",
-    DUST_PATH / "include_a" / "dust" / "error.h",
-    DUST_PATH / "include_a" / "dust" / "ansi.h",
-    DUST_PATH / "include_a" / "dust" / "parser.h",
+    DUST_PATH / "src" / "cli.c",
+    DUST_PATH / "src" / "tokenizer.c",
+    DUST_PATH / "src" / "ustring.c",
+    DUST_PATH / "src" / "error.c",
+    DUST_PATH / "src" / "parser.c",
+    DUST_PATH / "src" / "platform.c"
+]
+
+INCLUDE_FILES = [
+    DUST_PATH / "include" / "dust" / "tokenizer.h",
+    DUST_PATH / "include" / "dust" / "ustring.h",
+    DUST_PATH / "include" / "dust" / "error.h",
+    DUST_PATH / "include" / "dust" / "ansi.h",
+    DUST_PATH / "include" / "dust" / "parser.h",
+    DUST_PATH / "include" / "dust" / "platform.h"
 ]
 
 class ValidityError(Exception): pass
@@ -147,26 +153,22 @@ class Compiler:
     def __init__(self, option_handler: OptionHandler):
         self.option_handler = option_handler
 
-        sources = (os.path.join("src_a", "ustring.c"),
-                   os.path.join("src_a", "tokenizer.c"),
-                   os.path.join("src_a", "parser.c"))
-
         if option_handler.cores == 1:
-            self.targets = [source for source in sources]
+            self.targets = [str(source) for source in SOURCE_FILES]
 
         else:
             self.targets = [list() for _ in range(option_handler.cores)]
 
             i = 0
-            for source in sources:
-                self.targets[i].append(source)
+            for source in SOURCE_FILES:
+                self.targets[i].append(str(source))
                 i += 1
                 if i > len(self.targets)-1: i = 0
 
     # Compile on only one process
     def _compile_1proc(self):
         start_time = time.perf_counter()
-        os.system(f"gcc -o dust {' '.join(self.targets)} -I./include_a/ {self.option_handler.get_gcc_argstr()}")
+        os.system(f"gcc -o dust {' '.join(self.targets)} -I./include/ {self.option_handler.get_gcc_argstr()}")
         return time.perf_counter() - start_time
 
     # Compile on multiple processes
@@ -176,7 +178,7 @@ class Compiler:
 
         start_time = time.perf_counter()
         for sources in self.targets:
-            subprocs.append(subprocess.Popen(("gcc", "-c", *sources, "-I./include_a/")))
+            subprocs.append(subprocess.Popen(("gcc", "-c", *sources, "-I./include/")))
 
         for s in subprocs:
             s.communicate()
