@@ -1,4 +1,4 @@
-<p align="center"><img src="https://github.com/kadir014/Dust/blob/master/assets/dust_logo.png" width=130></p>
+<p align="center"><img src="https://raw.githubusercontent.com/kadir014/Dust/main/assets/dust_logo.png" width=130></p>
 <p align="center">
   <img src="https://img.shields.io/badge/license-MIT-blue.svg">
   <img src="https://img.shields.io/badge/version-0.0.16-yellow">
