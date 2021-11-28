@@ -67,14 +67,13 @@ void raise(ErrorType type, u32char *message, u32char *source, int x, int y) {
 void raise_internal(u32char *message) {
     switch (ERROR_ANSI) {
         case 1:
-            printf("%lsInternalError%s:%s %s",
+            printf("%sInternalError%s:%s %s",
                     ANSI_FG_LIGHTRED, ANSI_FG_DARKGRAY, ANSI_END, utf32_to_utf8(message));
 
             exit(1);
 
         case 0:
-            printf("InternalError: %s",
-                    ANSI_FG_LIGHTRED, ANSI_FG_DARKGRAY, ANSI_END, utf32_to_utf8(message));
+            printf("InternalError: %s", utf32_to_utf8(message));
 
             exit(1);
     }

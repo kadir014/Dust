@@ -141,13 +141,13 @@ Platform get_platform(){
     FILE *fp;
     char line[128];
 
-    fp = popen("lsb_release -a", "r");
+    fp = popen("lsb_release -idr", "r");
     if (fp == NULL) {
         raise_internal(L"popen failed");
     }
 
     while (fgets(line, sizeof(line), fp) != NULL) {
-        u32char uline[128] = utf8_to_utf32(line);
+        u32char *uline = utf8_to_utf32(line);
 
         if (u32startswith(uline, L"Distributor ID:")) {
             u32char *new = u32strip(u32slice(uline, u32find(uline, L":")+1, u32len(uline)));

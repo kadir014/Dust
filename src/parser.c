@@ -582,12 +582,12 @@ u32char *Node_repr(Node *node, int ident) {
 
     switch (node->type) {
         case NodeType_INTEGER:
-            sprintf(numstr, "%d", node->integer);
+            sprintf(numstr, "%ld", node->integer);
             finalstr = u32join(u32join(finalstr, u32join(U"integer: ", ascii_to_utf32(numstr))), U"\n");
             break;
 
         case NodeType_FLOAT:
-            sprintf(numstr, "%f", node->floating);
+            sprintf(numstr, "%lf", node->floating);
             finalstr = u32join(u32join(finalstr, u32join(U"float: ", ascii_to_utf32(numstr))), U"\n");
             break;
 

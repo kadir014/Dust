@@ -766,7 +766,7 @@ int u32toint(u32char *str, int base) {
  */
 double u32tofloat(u32char *str) {
     double result;
-    sscanf(utf32_to_ascii(str), "%f", &result);
+    sscanf(utf32_to_ascii(str), "%lf", &result);
     return result;
 }
 
