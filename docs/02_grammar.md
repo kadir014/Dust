@@ -5,7 +5,7 @@
 +    -   *    /    ^   !
 +=   -=  *=   /=   ^=
 ==   !=  <    <=   >   >=
-and  or  xor  not  has
+and  or  xor  not  in
 ++   --  ..
 
 /* Expression */
@@ -15,7 +15,10 @@ expression operator            // Reverse Unary
 expression operator expression // Binary
 
 /* Decleration */
+type identifier;
 type identifier = expression;
+type<type, ...> = expression;
+type<type, ...> identifier = expression;
 
 /* Assignment */
 identifier = expression;
@@ -26,6 +29,10 @@ expression[expression];
 /* Function call */
 expression();
 expression(expression, ...);
+
+/* Function decleration */
+func identifier(type arg, ...) {statement; ...}
+func<type, ...> identifier(type arg, ...) {statement; ...}
 
 /* Importing */
 import module;

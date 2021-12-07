@@ -22,7 +22,10 @@ typedef enum {
     NodeType_FLOAT,
     NodeType_STRING,
     NodeType_VAR,
+    NodeType_PRIMITIVE,
+    NodeType_ARRAY,
     NodeType_DECL,
+    NodeType_DECLN,
     NodeType_ASSIGN,
     NodeType_BINOP,
     NodeType_UNARYOP,
@@ -35,6 +38,7 @@ typedef enum {
     NodeType_FUNCBASE,
     NodeType_ENUM,
     NodeType_BODY,
+    NodeType_GENTYPE,
     NodeType_IF,
     NodeType_ELIF,
     NodeType_ELSE,
@@ -62,27 +66,9 @@ typedef enum {
     OpType_LE,
     OpType_GT,
     OpType_GE,
-    OpType_HAS
+    OpType_IN
 } OpType;
 
-
-typedef enum {
-    DeclType_INT8,
-    DeclType_INT16,
-    DeclType_INT64,
-    DeclType_INT32,
-    DeclType_INT128,
-    DeclType_UINT8,
-    DeclType_UINT16,
-    DeclType_UINT32,
-    DeclType_UINT64,
-    DeclType_UINT128,
-    DeclType_FLOAT32,
-    DeclType_FLOAT64,
-    DeclType_BOOL,
-    DeclType_STRING,
-    DeclType_BUFFER
-} DeclType;
 
 struct _Node;
 
@@ -103,10 +89,22 @@ struct _Node {
 
         u32char *variable;
 
+        u32char *primitive;
+
         struct {
-            DeclType decl_type;
+            NodeArray *array_nodearray;
+            bool array_empty;
+        };
+
+        struct {
+            struct _Node *decl_type;
             u32char *decl_var;
             struct _Node *decl_expr;
+        };
+
+        struct {
+            struct _Node *decln_type;
+            u32char *decln_var;
         };
 
         struct {
@@ -158,6 +156,11 @@ struct _Node {
         };
 
         struct {
+            NodeArray *gentype;
+            int gentype_tokens;
+        };
+
+        struct {
             struct _Node *if_expr;
             struct _Node *if_body;
         };
@@ -194,13 +197,17 @@ Node *NodeFloat_new(double floating);
 
 Node *NodeString_new(u32char *str);
 
-Node *NodeCall_new(Node *call_base);
+Node *NodeCall_new(Node *call_base, NodeArray *call_args);
 
 Node *NodeFuncBase_new(u32char *func_base);
 
 Node *NodeVar_new(u32char *variable);
 
-Node *NodeDecl_new(DeclType type, u32char *variable, Node *expression);
+Node *NodeNArray_new(NodeArray *node_array, bool empty);
+
+Node *NodeDecl_new(Node *type, u32char *variable, Node *expression);
+
+Node *NodeDecln_new(Node *type, u32char *variable);
 
 Node *NodeAssign_new(u32char *variable, Node *expression);
 
@@ -219,6 +226,8 @@ Node *NodeChild_new(Node *parent, Node *child);
 Node *NodeEnum_new(u32char *name, Node *body);
 
 Node *NodeBody_new(NodeArray *node_array, int tokens);
+
+Node *NodeGenType_new(NodeArray *node_array, int tokens);
 
 Node *NodeIf_new(Node *expression, Node *body);
 
@@ -244,7 +253,30 @@ void NodeArray_append(NodeArray *node_array, Node *node);
 
 Node *parse_expr(TokenArray *tokens);
 
+Node *parse_enum(TokenArray *tokens);
+
 Node *parse_body(TokenArray *tokens);
 
+OpType get_optype(u32char *tokenval);
+
+Token *current_token(TokenArray *tokens);
+
+void next_token(TokenArray *tokens);
+
+char expect_token(TokenArray *tokens, TokenType type);
+
+Node *parse_child(TokenArray *tokens, Node *node);
+
+Node *parse_subscript(TokenArray *tokens, Node *node);
+
+Node *parse_call(TokenArray *tokens, Node *node);
+
+Node *parse_expr_FACTOR(TokenArray *tokens);
+
+Node *parse_expr_POW(TokenArray *tokens);
+
+Node *parse_expr_TERM(TokenArray *tokens);
+
+Node *parse_expr_EXPR(TokenArray *tokens);
 
 #endif

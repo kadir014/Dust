@@ -9,7 +9,7 @@
 
     ustring.c  -  Dust Unicode & String Library
     -------------------------------------------------
-      This library utilizes 4byte character arrays as
+    This library utilizes 4byte character arrays as
     main string concept. You can encode & decode your
     string to various encodings to print or perform
     different actions on it.
@@ -26,7 +26,7 @@
         ASCII (1byte string):
             > ascii_to_utf32()
 
-      Character functions usually starts with either
+    Character functions usually starts with either
     'u32c' or ends with 'chr'. String functions
     starts with 'u32'.
 
@@ -782,9 +782,19 @@ char *u8readfile(char *filepath) {
     long fsize = ftell(f);
     fseek(f, 0, SEEK_SET);
 
-    char *string = malloc(fsize + 1);
+    char *string = (char *)malloc(fsize + 1);
     fread(string, 1, fsize, f);
+    // int c = 0;
+    // size_t i = 0;
+    // while (!feof(f) && i < fsize) {
+    //     c = fgetc(f);
+    //     string = u8push(string, c);
+    //     i++;
+    // }
     fclose(f);
+
+    printf("file size: %d\n", fsize);
+    printf("buf size: %d\n", strlen(string));
 
     string[fsize] = '\0';
 

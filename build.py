@@ -7,11 +7,13 @@
   https://github.com/kadir014/Dust
 
 
+
   Dust builder script
   ----------------------------
   This Python script is used to build (compile) Dust and
   distribute cross-platform packages.
   This script must be run in the same directory as Dust.
+
 
   a) Building Dust
   ----------------------------
@@ -34,6 +36,7 @@
   All files created during building are cleaned afterwards by
   default, but one can use `--clean` flag to remove them manually.
 
+
   b) Distributing Dust
   ----------------------------
   Use '--package' flag to distribute Dust package.
@@ -55,6 +58,8 @@ import pathlib
 import time
 import multiprocessing
 import subprocess
+import datetime
+import threading
 
 
 GH_REPO = "https://github.com/kadir014/Dust"
@@ -65,11 +70,12 @@ DUST_PATH = pathlib.Path(os.getcwd())
 
 SOURCE_FILES = [
     DUST_PATH / "src" / "cli.c",
-    DUST_PATH / "src" / "tokenizer.c",
     DUST_PATH / "src" / "ustring.c",
     DUST_PATH / "src" / "error.c",
+    DUST_PATH / "src" / "platform.c",
+    DUST_PATH / "src" / "tokenizer.c",
     DUST_PATH / "src" / "parser.c",
-    DUST_PATH / "src" / "platform.c"
+    DUST_PATH / "src" / "transpiler.c"
 ]
 
 INCLUDE_FILES = [
@@ -78,15 +84,104 @@ INCLUDE_FILES = [
     DUST_PATH / "include" / "dust" / "error.h",
     DUST_PATH / "include" / "dust" / "ansi.h",
     DUST_PATH / "include" / "dust" / "parser.h",
-    DUST_PATH / "include" / "dust" / "platform.h"
+    DUST_PATH / "include" / "dust" / "platform.h",
+    DUST_PATH / "include" / "dust" / "transpiler.h"
 ]
 
 class ValidityError(Exception): pass
 class OptionError(Exception): pass
 
 
-# Remove all object (.o) files from the previous compilation
+class Color:
+    """
+    Terminal ANSI color codes
+
+    It's easier and simpler to define it in the script
+    instead of using a dependency
+    """
+    reset        = "\033[0m"
+    bold         = "\033[01m"
+    fgblack      = "\033[30m"
+    fgdarkgray   = "\033[90m"
+    fglightgray  = "\033[37m"
+    fgwhite      = "\033[97m"
+    fgred        = "\033[31m"
+    fgorange     = "\033[33m"
+    fgyellow     = "\033[93m"
+    fggreen      = "\033[32m"
+    fgblue       = "\033[34m"
+    fgcyan       = "\033[36m"
+    fgpurple     = "\033[35m"
+    fgmagenta    = "\033[95m"
+    fglightred   = "\033[91m"
+    fglightgreen = "\033[92m"
+    fglightblue  = "\033[94m"
+    fglightcyan  = "\033[96m"
+    bgblack      = "\033[40m"
+    bgdarkgray   = "\033[100m"
+    bglightgray  = "\033[47m"
+    bgwhite      = "\033[107m"
+    bgred        = "\033[41m"
+    bgorange     = "\033[43m"
+    bgyellow     = "\033[103m"
+    bggreen      = "\033[42m"
+    bgblue       = "\033[44m"
+    bgcyan       = "\033[46m"
+    bgpurple     = "\033[45m"
+    bgmagenta    = "\033[105m"
+    bglightred   = "\033[101m"
+    bglightgreen = "\033[102m"
+    bglightblue  = "\033[104m"
+    bglightcyan  = "\033[106m"
+
+
+class LoadingBar(threading.Thread):
+    """
+    Loading bar animation on terminal
+
+    It's easier and simpler to implement it in the script
+    instead of using a dependency
+    """
+    def __init__(self):
+        super().__init__()
+
+        self.running = False
+        self.done = False
+        self.last_time = time.time()
+        self.frames = ("[/]", "[-]", "[\\]", "[|]")
+        self.frame = 0
+
+    def stop(self):
+        self.running = False
+
+    def run(self):
+        self.running = True
+        self.done = False
+
+        sys.stdout.write(" " * 16)
+        sys.stdout.flush()
+        sys.stdout.write("\b" * 16)
+
+        while self.running:
+            time.sleep(0.001)
+            if (time.time() - self.last_time > 0.1):
+                self.last_time = time.time()
+                self.frame += 1
+                if self.frame > len(self.frames)-1:
+                    self.frame = 0
+
+            sys.stdout.write(f"Compiling... {self.frames[self.frame]}")
+            sys.stdout.flush()
+            sys.stdout.write("\b" * 16)
+
+        sys.stdout.write("\b" * 16)
+        self.done = True
+
+
 def remove_object_files():
+    """
+    Remove all object (.o) files from the previous compilation
+    """
     for file in os.listdir(os.getcwd()):
         if file.endswith(".o"):
             os.remove(file)
@@ -100,6 +195,13 @@ class OptionHandler:
         self.cores        = CPU_COUNT # -jx
         self.optimization = 0         # -Ox
         self.clean        = False     # --clean
+
+        self.optimization_map = {
+            0: "Don't optimize",
+            1: "Optimize moderately",
+            2: "Optimize more",
+            3: "Optimize even more"
+        }
         
         self.package       = False # --package
         self.package_dist  = False # --package-dist
@@ -166,15 +268,25 @@ class Compiler:
                 i += 1
                 if i > len(self.targets)-1: i = 0
 
-    # Compile on only one process
     def _compile_1proc(self):
-        start_time = time.perf_counter()
-        os.system(f"gcc -o dust {' '.join(self.targets)} -I./include/ {self.option_handler.get_gcc_argstr()}")
-        return time.perf_counter() - start_time
+        """
+        Compiles on single process
+        """
+        os.system("windres assets/dust.rc -O coff -o dust-res.res")
 
-    # Compile on multiple processes
+        start_time = time.perf_counter()
+        os.system(f"gcc -o dust {' '.join(self.targets)} dust-res.res -I./include/ {self.option_handler.get_gcc_argstr()}")
+        end_time = time.perf_counter() - start_time
+
+        if os.path.exists("dust-res.res"): os.remove("dust-res.res")
+        return end_time
+
     def _compile_multiproc(self):
+        """
+        Compiles on multiple processes
+        """
         remove_object_files()
+        os.system("windres assets/dust.rc -O coff dust-res.res")
         subprocs = []
 
         start_time = time.perf_counter()
@@ -185,15 +297,18 @@ class Compiler:
             s.communicate()
 
         # Link all object files to finish compiling
-        os.system(f"gcc -o dust tokenizer.o ustring.o {self.option_handler.get_gcc_argstr()}")
+        os.system(f"gcc -o dust cli.o ustring.o error.o platform.o tokenizer.o parser.o transpiler.o dust-res.res {self.option_handler.get_gcc_argstr()}")
     
         end_time = time.perf_counter() - start_time
         remove_object_files()
+        if os.path.exists("dust-res.res"): os.remove("dust-res.res")
 
         return end_time
 
-    # Start compiling
     def compile(self):
+        """
+        Compile Dust
+        """
         if os.path.exists(FINAL_BUILD): os.remove(FINAL_BUILD)
 
         if self.option_handler.cores == 1:
@@ -203,6 +318,9 @@ class Compiler:
     
 
 if __name__ == "__main__":
+    if platform.system() == "Windows":
+        os.system(" ")
+
     option_handler = OptionHandler()
 
     for arg in sys.argv[1:]:
@@ -226,15 +344,39 @@ if __name__ == "__main__":
 
     # Build Dust
     else:
-        if option_handler.cores > CPU_COUNT:
-            print(f"warning: given core count ({option_handler.cores})" + \
-                  f" is higher than your machine's core count ({CPU_COUNT})\n")
+        print("Welcome to the Dust builder\n" + \
+              "\n" + \
+              "Configured settings\n" + \
+              f" - Compiler process(es): {Color.fgyellow}{option_handler.cores}{Color.reset}\n" + \
+              f" - Optimization level  : {Color.fgyellow}{option_handler.optimization}{Color.reset} " + \
+              f"({option_handler.optimization_map[option_handler.optimization]})\n")
 
-        print(f"Started compiling on {option_handler.cores} cores\n" +
-            f"Optimization level: {option_handler.optimization}\n")
+        if option_handler.cores > CPU_COUNT:
+            print(f"{Color.fglightred}[WARNING]{Color.reset} given process count ({option_handler.cores})" + \
+                  f" exceeds your machine's core count ({CPU_COUNT})\n")
+
+        print(f"Starting building Dust")
+
+        if platform.system() == "Windows":
+            system = f"Windows {platform.release()} ({platform.win32_ver()[1]}, {platform.win32_ver()[2]})"
+        else:
+            system = f"{platform.system()} {platform.release()} ({platform.version()})"
+
+        machine = ("32-bit", "64-bit")[platform.machine().endswith("64")]
+
+        print(f"{Color.fglightblue}[INFO]{Color.reset} Start time: {datetime.datetime.now().strftime('%H:%M:%S %d.%m.%Y')}")
+        print(f"{Color.fglightblue}[INFO]{Color.reset} Platform: {system}")
+        print(f"{Color.fglightblue}[INFO]{Color.reset} Machine: {machine}\n")
+
+        loader = LoadingBar()
+        loader.start()
 
         compiler = Compiler(option_handler)
 
         end_time = compiler.compile()
 
-        print(f"Dust succesfully built in {round(end_time, 1)} secs ({int(end_time*1000)} ms)")
+        loader.stop()
+        while not loader.done: pass
+
+        print(f"{Color.fglightgreen}[DONE]{Color.reset} Dust succesfully built in {round(end_time, 1)} secs " + \
+               f"({int(end_time*1000)} ms)")

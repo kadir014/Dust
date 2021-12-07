@@ -15,8 +15,6 @@
 
 #include "dust/ustring.h"
 
-u32char *get_gcc_version();
-
 u32char *get_osname();
 
 typedef struct {

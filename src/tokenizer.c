@@ -285,7 +285,7 @@ void tokenize_append(Token* token, TokenArray *tokens, int x, int y) {
         
         if (u32isequal(t, U"and") || u32isequal(t, U"or")  ||
             u32isequal(t, U"xor") || u32isequal(t, U"not") ||
-            u32isequal(t, U"has")) {
+            u32isequal(t, U"in")) {
                 token->type = TokenType_OPERATOR;
             }
 
@@ -305,7 +305,9 @@ void tokenize_append(Token* token, TokenArray *tokens, int x, int y) {
  */
 TokenArray *tokenize(u32char *raw){
     TokenArray *tokens = TokenArray_new(1);
-    raw = u32replace(u32strip(raw), U"\n", U"");
+    //raw = u32replace(u32strip(raw), U"\n", U"");
+    //raw = u32strip(raw);
+    printf("\n\n%s\n\n", utf32_to_utf8(raw));
     if (u32len(raw) == 0) return tokens;
     Token *token = Token_new(TokenType_EOF, U"");
 
@@ -351,6 +353,8 @@ TokenArray *tokenize(u32char *raw){
         if (chr == U'\n') {
             x = 0;
             y++;
+            i++;
+            continue;
         }
 
         else if (chr == U' ') {
@@ -363,67 +367,85 @@ TokenArray *tokenize(u32char *raw){
             continue;
         }
 
+        else if (chr == U'/' && raw[i+1] == U'/') {
+            while (raw[i] != U'\n') i++;
+
+            i++;
+            x = 0;
+            y += 1;
+            continue;
+        }
+
+        else if (chr == U'/' && raw[i+1] == U'*') {
+            i+=2;
+            while (!(raw[i] == U'*' && raw[i+1] == U'/')) i++;
+
+            i+=2;
+            x++;
+            continue;
+        }
+
         else if (chr == U'+' || chr == U'-' || chr == U'*' ||
                  chr == U'/' || chr == U'^' || chr == U'=' ||
                  chr == U'>' || chr == U'<' || chr == U'!') {
 
-                    if (u32len(token->data) > 0) {
-                        tokenize_append(token, tokens, x, y);
-                        token = Token_new(TokenType_EOF, U"");
-                    }
+            if (u32len(token->data) > 0) {
+                tokenize_append(token, tokens, x, y);
+                token = Token_new(TokenType_EOF, U"");
+            }
 
-                    if (chr == U'=' && raw[i+1] == U'=') {
-                        token->data = U"==";
-                        i++;
-                    }
-                    else if (chr == U'+' && raw[i+1] == U'=') {
-                        token->data = U"+=";
-                        i++;
-                    }
-                    else if (chr == U'-' && raw[i+1] == U'=') {
-                        token->data = U"-=";
-                        i++;
-                    }
-                    else if (chr == U'*' && raw[i+1] == U'=') {
-                        token->data = U"*=";
-                        i++;
-                    }
-                    else if (chr == U'/' && raw[i+1] == U'=') {
-                        token->data = U"/=";
-                        i++;
-                    }
-                    else if (chr == U'^' && raw[i+1] == U'=') {
-                        token->data = U"^=";
-                        i++;
-                    }
-                    else if (chr == U'<' && raw[i+1] == U'=') {
-                        token->data = U"<=";
-                        i++;
-                    }
-                    else if (chr == U'>' && raw[i+1] == U'=') {
-                        token->data = U">=";
-                        i++;
-                    }
-                    else if (chr == U'!' && raw[i+1] == U'=') {
-                        token->data = U"!=";
-                        i++;
-                    }
-                    else {
-                        token->data = u32pushl(token->data, chr);
-                        //token->data = u32join(U"", u32char_to_u32string(&chr, chrstr));
-                    }
+            if (chr == U'=' && raw[i+1] == U'=') {
+                token->data = U"==";
+                i++;
+            }
+            else if (chr == U'+' && raw[i+1] == U'=') {
+                token->data = U"+=";
+                i++;
+            }
+            else if (chr == U'-' && raw[i+1] == U'=') {
+                token->data = U"-=";
+                i++;
+            }
+            else if (chr == U'*' && raw[i+1] == U'=') {
+                token->data = U"*=";
+                i++;
+            }
+            else if (chr == U'/' && raw[i+1] == U'=') {
+                token->data = U"/=";
+                i++;
+            }
+            else if (chr == U'^' && raw[i+1] == U'=') {
+                token->data = U"^=";
+                i++;
+            }
+            else if (chr == U'<' && raw[i+1] == U'=') {
+                token->data = U"<=";
+                i++;
+            }
+            else if (chr == U'>' && raw[i+1] == U'=') {
+                token->data = U">=";
+                i++;
+            }
+            else if (chr == U'!' && raw[i+1] == U'=') {
+                token->data = U"!=";
+                i++;
+            }
+            else {
+                token->data = u32pushl(token->data, chr);
+                //token->data = u32join(U"", u32char_to_u32string(&chr, chrstr));
+            }
 
-                    token->type = TokenType_OPERATOR;
-                    token->x = x;
-                    token->y = y;
-                    
-                    TokenArray_append(tokens, token);
-                    token = Token_new(TokenType_EOF, U"");
+            token->type = TokenType_OPERATOR;
+            token->x = x;
+            token->y = y;
+            
+            TokenArray_append(tokens, token);
+            token = Token_new(TokenType_EOF, U"");
 
-                    i++;
-                    x++;
-                    continue;
-                }
+            i++;
+            x++;
+            continue;
+        }
 
         else if (chr == U'(' || chr == U')' || chr == U'[' ||
                  chr == U']' || chr == U'{' || chr == U'}') {

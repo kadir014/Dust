@@ -13,211 +13,8 @@
 #include "dust/ustring.h"
 #include "dust/error.h"
 #include "dust/tokenizer.h"
+#include "dust/parser.h"
 
-
-typedef enum {
-    NodeType_INTEGER,
-    NodeType_FLOAT,
-    NodeType_STRING,
-    NodeType_VAR,
-    NodeType_DECL,
-    NodeType_ASSIGN,
-    NodeType_BINOP,
-    NodeType_UNARYOP,
-    NodeType_RUNARYOP,
-    NodeType_IMPORT,
-    NodeType_IMPORTF,
-    NodeType_CHILD,
-    NodeType_SUBSCRIPT,
-    NodeType_CALL,
-    NodeType_FUNCBASE,
-    NodeType_ENUM,
-    NodeType_BODY,
-    NodeType_IF,
-    NodeType_ELIF,
-    NodeType_ELSE,
-    NodeType_WHEN,
-    NodeType_REPEAT,
-    NodeType_FOR,
-    NodeType_WHILE
-} NodeType;
-
-
-typedef enum {
-    OpType_ADD,
-    OpType_SUB,
-    OpType_MUL,
-    OpType_DIV,
-    OpType_AND,
-    OpType_OR,
-    OpType_XOR,
-    OpType_NOT,
-    OpType_POW,
-    OpType_RANGE,
-    OpType_EQ,
-    OpType_NEQ,
-    OpType_LT,
-    OpType_LE,
-    OpType_GT,
-    OpType_GE,
-    OpType_HAS
-} OpType;
-
-
-typedef enum {
-    DeclType_INT8,
-    DeclType_INT16,
-    DeclType_INT64,
-    DeclType_INT32,
-    DeclType_INT128,
-    DeclType_UINT8,
-    DeclType_UINT16,
-    DeclType_UINT32,
-    DeclType_UINT64,
-    DeclType_UINT128,
-    DeclType_FLOAT32,
-    DeclType_FLOAT64,
-    DeclType_BOOL,
-    DeclType_STRING,
-    DeclType_BUFFER
-} DeclType;
-
-
-struct _Node;
-
-
-/**
- * @param array Node array
- * @param size Default size
- * @param used Length of the array
- */
-typedef struct {
-    struct _Node *array;
-    size_t size;
-    size_t used;
-} NodeArray;
-
-
-/**
- * @param type Type of the node
- * @param union{...} Fields of the node
- */
-struct _Node {
-    NodeType type;
-    union {
-        /* INTEGER LITERAL */
-        long integer;
-
-        /* FLOAT LITERAL */
-        double floating;
-
-        /* STRING LITERAL*/
-        u32char *string;
-
-        /* VARIABLE */
-        u32char *variable;
-
-        /* DECLERATION */
-        struct {
-            DeclType decl_type;
-            u32char *decl_var;
-            struct _Node *decl_expr;
-        };
-
-        /* ASSIGNMENT */
-        struct {
-            u32char *assign_var;
-            struct _Node *assign_expr;
-        };
-
-        /* FUNCTION/CLASS CALL */
-        struct {
-            struct _Node *call_base;
-            NodeArray *call_args;
-        };
-
-        /* FUNCTION BASE */
-        u32char *func_base;
-
-        /* BINARY OPERATOR */
-        struct {
-            OpType bin_optype;
-            struct _Node *bin_left;
-            struct _Node *bin_right;
-        };
-
-        /* UNARY OPERATOR */
-        struct {
-            OpType unary_optype;
-            struct _Node *unary_right;
-        };
-
-        /* IMPORT */
-        struct {
-            u32char *import_module;
-            u32char *import_member;
-        };
-
-        /* SUBSCRIPT */
-        struct {
-            struct _Node *subs_node;
-            struct _Node *subs_expr;
-        };
-
-        /* CHILD */
-        struct {
-            struct _Node *chld_parent;
-            struct _Node *chld_child;
-        };
-
-        /* ENUMERATION */
-        struct {
-            u32char *enum_name;
-            struct _Node *enum_body;
-        };
-
-        /* BODY */
-        struct {
-            NodeArray *body;
-            int body_tokens;
-        };
-
-        /* IF */
-        struct {
-            struct _Node *if_expr;
-            struct _Node *if_body;
-        };
-
-        /* ELIF */
-        struct {
-            struct _Node *elif_expr;
-            struct _Node *elif_body;
-        };
-
-        /* ELSE */
-        struct _Node *else_body;
-
-        /* REPEAT */
-        struct {
-            struct _Node *repeat_expr;
-            struct _Node *repeat_body;
-        };
-
-        /* WHILE */
-        struct {
-            struct _Node *while_expr;
-            struct _Node *while_body;
-        };
-
-        /* FOR */
-        struct {
-            struct _Node *for_var;
-            struct _Node *for_expr;
-            struct _Node *for_body;
-        };
-    };
-};
-typedef struct _Node Node;
 
 /**
  * @brief Create a new integer node
@@ -307,12 +104,34 @@ Node *NodeVar_new(u32char *variable) {
  * @param expression Decleration expression
  * @return Node's pointer
  */
-Node *NodeDecl_new(DeclType type, u32char *variable, Node *expression) {
+Node *NodeDecl_new(Node *type, u32char *variable, Node *expression) {
     Node *node = (Node *)malloc(sizeof(Node));
     node->type = NodeType_DECL;
     node->decl_type = type;
     node->decl_var  = variable;
     node->decl_expr = expression;
+    return node;
+}
+
+/**
+ * @brief Create a new decleration (without initializer) node
+ * 
+ * @param type Type of the variable
+ * @param variable Identifier of the variable
+ * @return Node's pointer
+ */
+Node *NodeDecln_new(Node *type, u32char *variable) {
+    Node *node = (Node *)malloc(sizeof(Node));
+    node->type = NodeType_DECLN;
+    node->decl_type = type;
+    node->decl_var  = variable;
+    return node;
+}
+
+Node *NodePrimitive_new(u32char *primitive) {
+    Node *node = (Node *)malloc(sizeof(Node));
+    node->type = NodeType_PRIMITIVE;
+    node->primitive = primitive;
     return node;
 }
 
@@ -440,7 +259,7 @@ Node *NodeEnum_new(u32char *name, Node *body) {
  * @brief Create a new body node
  * 
  * @param node_array Array of statement nodes
- * @param tokens Number of tokens body includes
+ * @param tokens Number of tokens body contains
  * @return Node's pointer 
  */
 Node *NodeBody_new(NodeArray *node_array, int tokens) {
@@ -448,6 +267,21 @@ Node *NodeBody_new(NodeArray *node_array, int tokens) {
     node->type = NodeType_BODY;
     node->body = node_array;
     node->body_tokens = tokens;
+    return node;
+}
+
+/**
+ * @brief Create a new generic type node
+ * 
+ * @param node_array Array of expression nodes
+ * @param tokens Number of tokens generic type contains
+ * @return Node's pointer 
+ */
+Node *NodeGenType_new(NodeArray *node_array, int tokens) {
+    Node *node = (Node *)malloc(sizeof(Node));
+    node->type = NodeType_GENTYPE;
+    node->gentype = node_array;
+    node->gentype_tokens = tokens;
     return node;
 }
 
@@ -541,6 +375,21 @@ Node *NodeFor_new(Node *var, Node *iterator, Node *body) {
     return node;
 }
 
+/**
+ * @brief Create a new array node
+ * 
+ * @param node_array Array's content
+ * @param empty Whether the array is empty or not
+ * @return Node's pointer
+ */
+Node *NodeNArray_new(NodeArray *node_array, bool empty) {
+    Node *node = (Node *)malloc(sizeof(Node));
+    node->type = NodeType_ARRAY;
+    node->array_nodearray = node_array;
+    node->array_empty = empty;
+    return node;
+}
+
 //TODO: cover all cases
 /**
  * @brief Release all resources used by the node
@@ -619,73 +468,33 @@ u32char *Node_repr(Node *node, int ident) {
             finalstr = u32join(finalstr, u32join(U"function: ", u32join(node->func_base, U"\n")));
             break;
 
+        case NodeType_PRIMITIVE:
+            finalstr = u32join(finalstr, u32join(U"primitive: ", u32join(node->primitive, U"\n")));
+            break;
+
+        case NodeType_ARRAY:
+            finalstr = u32join(finalstr, U"array:\n");
+            
+            int i = 0;
+            while (i < node->array_nodearray->used) {
+                finalstr = u32join(finalstr, u32join(identstr, Node_repr(&(node->array_nodearray->array[i]), ident+1)));
+                i++;
+            }
+            break;
+
         case NodeType_DECL:
             finalstr = u32join(finalstr, U"declaration:\n");
-            
-            switch (node->decl_type) {
-                case DeclType_INT8:
-                    finalstr = u32join(finalstr, u32join(identstr, U"type: int8\n"));
-                    break;
 
-                case DeclType_INT16:
-                    finalstr = u32join(finalstr, u32join(identstr, U"type: int16\n"));
-                    break;
-
-                case DeclType_INT32:
-                    finalstr = u32join(finalstr, u32join(identstr, U"type: int32\n"));
-                    break;
-
-                case DeclType_INT64:
-                    finalstr = u32join(finalstr, u32join(identstr, U"type: int64\n"));
-                    break;
-
-                case DeclType_INT128:
-                    finalstr = u32join(finalstr, u32join(identstr, U"type: int128\n"));
-                    break;
-
-                case DeclType_UINT8:
-                    finalstr = u32join(finalstr, u32join(identstr, U"type: uint8\n"));
-                    break;
-
-                case DeclType_UINT16:
-                    finalstr = u32join(finalstr, u32join(identstr, U"type: uint16\n"));
-                    break;
-
-                case DeclType_UINT32:
-                    finalstr = u32join(finalstr, u32join(identstr, U"type: uint32\n"));
-                    break;
-
-                case DeclType_UINT64:
-                    finalstr = u32join(finalstr, u32join(identstr, U"type: uint64\n"));
-                    break;
-
-                case DeclType_UINT128:
-                    finalstr = u32join(finalstr, u32join(identstr, U"type: uint128\n"));
-                    break;
-
-                case DeclType_FLOAT32:
-                    finalstr = u32join(finalstr, u32join(identstr, U"type: float32\n"));
-                    break;
-
-                case DeclType_FLOAT64:
-                    finalstr = u32join(finalstr, u32join(identstr, U"type: float64\n"));
-                    break;
-
-                case DeclType_BOOL:
-                    finalstr = u32join(finalstr, u32join(identstr, U"type: bool\n"));
-                    break;
-
-                case DeclType_STRING:
-                    finalstr = u32join(finalstr, u32join(identstr, U"type: string\n"));
-                    break;
-
-                case DeclType_BUFFER:
-                    finalstr = u32join(finalstr, u32join(identstr, U"type: buffer\n"));
-                    break;
-            }
-
+            finalstr = u32join(finalstr, u32join(identstr, u32join(U"type: ", Node_repr(node->decl_type, ident+1))));
             finalstr = u32join(u32join(finalstr, u32join(identstr, u32join(U"var: ", node->decl_var))), U"\n");
             finalstr = u32join(finalstr, u32join(identstr, u32join(U"expr: ", Node_repr(node->decl_expr, ident+1))));
+            break;
+
+        case NodeType_DECLN:
+            finalstr = u32join(finalstr, U"declaration:\n");
+
+            finalstr = u32join(finalstr, u32join(identstr, u32join(U"type: ", Node_repr(node->decl_type, ident+1))));
+            finalstr = u32join(u32join(finalstr, u32join(identstr, u32join(U"var: ", node->decln_var))), U"\n");
             break;
 
         case NodeType_ASSIGN:
@@ -758,8 +567,8 @@ u32char *Node_repr(Node *node, int ident) {
                     finalstr = u32join(finalstr, u32join(identstr, U"op: >=\n"));
                     break;
 
-                case OpType_HAS:
-                    finalstr = u32join(finalstr, u32join(identstr, U"op: has\n"));
+                case OpType_IN:
+                    finalstr = u32join(finalstr, u32join(identstr, U"op: in\n"));
                     break;
             }
 
@@ -808,10 +617,20 @@ u32char *Node_repr(Node *node, int ident) {
         case NodeType_BODY:
             finalstr = u32join(finalstr, U"body:\n");
             
-            int i = 0;
-            while (i < node->body->used) {
-                finalstr = u32join(finalstr, u32join(identstr, Node_repr(&(node->body->array[i]), ident+1)));
-                i++;
+            int t = 0;
+            while (t < node->body->used) {
+                finalstr = u32join(finalstr, u32join(identstr, Node_repr(&(node->body->array[t]), ident+1)));
+                t++;
+            }
+            break;
+
+        case NodeType_GENTYPE:
+            finalstr = u32join(finalstr, U"generic type:\n");
+            
+            int j = 0;
+            while (j < node->gentype->used) {
+                finalstr = u32join(finalstr, u32join(identstr, Node_repr(&(node->gentype->array[j]), ident+1)));
+                j++;
             }
             break;
 
@@ -916,23 +735,6 @@ void NodeArray_append(NodeArray *node_array, Node *node) {
 }
 
 
-//TODO: organize forward declerations, or include the header first
-DeclType get_decltype(u32char *tokenval);
-
-Node *parse_expr(TokenArray *tokens);
-
-Node *parse_expr_EXPR(TokenArray *tokens);
-
-Node *parse_expr_FACTOR(TokenArray *tokens);
-
-Node *parse_child(TokenArray *tokens, Node *node);
-
-Node *parse_subscript(TokenArray *tokens, Node *node);
-
-Node *parse_call(TokenArray *tokens, Node *node);
-
-Token *current_token(TokenArray *tokens);
-
 size_t _token_index = 0;
 size_t _last_token_count = 0;
 int _body_count = 0;
@@ -960,12 +762,12 @@ Node *parse_enum(TokenArray *tokens) {
         }
 
         else if (token->type == TokenType_NEXTSTM) {
-            raise(ErrorType_Syntax, U"Unexpected symbol ; in enumeration", U"<raw>", token->x, token->y);
+            raise(ErrorType_Syntax, U"Unexpected symbol ; in enumeration", U"<stdin>", token->x, token->y);
         }
 
         else if (token->type == TokenType_COMMA) {
             if (tokens->array[i-1].type == TokenType_COMMA) {
-                raise(ErrorType_Syntax, U"Statement expected before ,", U"<raw>", token->x, token->y);
+                raise(ErrorType_Syntax, U"Statement expected before ,", U"<stdin>", token->x, token->y);
             }
             i++;
             continue;
@@ -1000,13 +802,58 @@ Node *parse_enum(TokenArray *tokens) {
         }
 
         else {
-            raise(ErrorType_Syntax, U"Unexpected field in enumeration", U"<raw>", token->x, token->y);
+            raise(ErrorType_Syntax, U"Unexpected field in enumeration", U"<stdin>", token->x, token->y);
         }
 
         i++;
     }
 
     return NodeBody_new(node_array, i);
+}
+
+
+/**
+ * @brief Parse a type genericizator
+ * 
+ * @param tokens 
+ * @return Node* 
+ */
+Node *parse_generic(TokenArray *tokens) {
+    size_t i = 0;
+    size_t commas = 0;
+    NodeArray *node_array = NodeArray_new(1);
+
+    while (i < tokens->used) {
+        Token *token = &(tokens->array[i]);
+        
+        if (token->type == TokenType_OPERATOR && u32isequal(token->data, U">")) {
+            break;
+        }
+        else if (token->type == TokenType_COMMA) {
+            i += 1;
+            continue;
+        }
+        else if (token->type != TokenType_IDENTIFIER) {
+            raise(ErrorType_Syntax, U"Expected type or >", U"<stdin>", token->x, token->y);
+        }
+
+        TokenArray *slice = TokenArray_slice(tokens, i);
+        _last_token_count = _token_index+1;
+        _token_index = 0;
+        Node *factor = parse_expr_FACTOR(slice);
+        if (factor->type == NodeType_VAR) {
+            u32char *data = factor->variable;
+            Node_free(factor);
+            factor = NodePrimitive_new(data);
+        }
+        NodeArray_append(node_array, factor);
+        TokenArray_free(slice);
+
+        i += _token_index;
+    }
+    i += 1;
+
+    return NodeGenType_new(node_array, i);
 }
 
 
@@ -1039,7 +886,7 @@ Node *parse_body(TokenArray *tokens) {
         /* End of body */
         else if (token->type == TokenType_RCURLY) {
             if (_body_count < 0) {
-                raise(ErrorType_Syntax, U"Unexpected }", U"<raw>", token->x, token->y);
+                raise(ErrorType_Syntax, U"Unexpected }", U"<stdin>", token->x, token->y);
             }
 
             _body_count--;
@@ -1052,7 +899,7 @@ Node *parse_body(TokenArray *tokens) {
 
         else if (token->type == TokenType_NEXTSTM) {
             if (tokens->array[i-1].type == TokenType_NEXTSTM) {
-                raise(ErrorType_Syntax, U"Statement expected before ;", U"<raw>", token->x, token->y);
+                raise(ErrorType_Syntax, U"Statement expected before ;", U"<stdin>", token->x, token->y);
             }
             i++;
             continue;
@@ -1088,35 +935,113 @@ Node *parse_body(TokenArray *tokens) {
                      }
 
                 else {
-                    raise(ErrorType_Syntax, U"Invalid import scheme", U"<raw>", token->x, token->y);
+                    raise(ErrorType_Syntax, U"Invalid import scheme", U"<stdin>", token->x, token->y);
                 }
+            }
+
+            /* DECLERATION (NO INIT.)   type identifier; */
+            else if (tokens->array[i+1].type == TokenType_IDENTIFIER &&
+                     (tokens->array[i+2].type == TokenType_NEXTSTM ||
+                      tokens->array[i+2].type == TokenType_EOF)) {
+
+                Node *primitive = NodePrimitive_new(tokens->array[i].data);
+                u32char *var = (&(tokens->array[i+1]))->data;
+
+                NodeArray_append(node_array, NodeDecln_new(primitive, var));
+                i += 3;
+                continue;
             }
 
             /* DECLERATION   type identifier = expression; */
             else if ((&(tokens->array[i+1]))->type == TokenType_IDENTIFIER &&
-                (&(tokens->array[i+2]))->type == TokenType_OPERATOR   &&
-                u32isequal((&(tokens->array[i+2]))->data, U"=")) {
+                    (&(tokens->array[i+2]))->type == TokenType_OPERATOR   &&
+                    u32isequal((&(tokens->array[i+2]))->data, U"=")) {
                     
-                    DeclType type = get_decltype((&(tokens->array[i]))->data);
-                    u32char *var = (&(tokens->array[i+1]))->data;
+                Node *primitive = NodePrimitive_new(tokens->array[i].data);
+                u32char *var = (&(tokens->array[i+1]))->data;
 
-                    TokenArray *slice = TokenArray_slicet(tokens, i+3);
-                    TokenArray_append(slice, Token_new(TokenType_EOF, U""));
-                    Node *expr = parse_expr(slice);
-                    TokenArray_free(slice);
+                TokenArray *slice = TokenArray_slicet(tokens, i+3);
+                TokenArray_append(slice, Token_new(TokenType_EOF, U""));
+                Node *expr = parse_expr(slice);
+                TokenArray_free(slice);
 
-                    NodeArray_append(node_array, NodeDecl_new(type, var, expr));
+                NodeArray_append(node_array, NodeDecl_new(primitive, var, expr));
 
-                    // end of the expression
-                    int a = 0;
-                    while (i+a < tokens->used) {
-                        if ((&(tokens->array[a+i]))->type == TokenType_NEXTSTM ||
-                            (&(tokens->array[a+i]))->type == TokenType_EOF) break;
-                        a++;
-                    }
-                    i += a+1;
-                    continue;
+                // end of the expression
+                int a = 0;
+                while (i+a < tokens->used) {
+                    if ((&(tokens->array[a+i]))->type == TokenType_NEXTSTM ||
+                        (&(tokens->array[a+i]))->type == TokenType_EOF) break;
+                    a++;
                 }
+                i += a+1;
+                continue;
+            }
+
+            /* GENERIC DECLERATION   type<type, ...> identifier[ = expression]; */
+            else if(tokens->array[i+1].type == TokenType_OPERATOR &&
+                    u32isequal(tokens->array[i+1].data, U"<")) {
+
+                TokenArray *slice = TokenArray_slicet(tokens, i+2);
+                TokenArray_append(slice, Token_new(TokenType_EOF, U""));
+                Node *generic = parse_generic(slice);
+                TokenArray_free(slice);
+
+                i += generic->gentype_tokens+2;
+
+                u32char *var = tokens->array[i].data;
+
+                if (tokens->array[i].type == TokenType_IDENTIFIER) {
+
+                    if (tokens->array[i+1].type == TokenType_NEXTSTM ||
+                        tokens->array[i+1].type == TokenType_EOF) {
+
+
+                        NodeArray_append(node_array, NodeDecln_new(generic, var));
+                        i += 2;
+                        continue;
+                    }
+
+                    else if (tokens->array[i+1].type == TokenType_OPERATOR &&
+                            u32isequal(tokens->array[i+1].data, U"=")) {
+
+                        TokenArray *sliceb = TokenArray_slicet(tokens, i+2);
+                        TokenArray_append(sliceb, Token_new(TokenType_EOF, U""));
+                        Node *exprz = parse_expr(sliceb);
+                        TokenArray_free(sliceb);
+
+                        NodeArray_append(node_array, NodeDecl_new(generic, var, exprz));
+
+                        // end of the expression
+                        int a = 0;
+                        while (i+a < tokens->used) {
+                            if ((&(tokens->array[a+i]))->type == TokenType_NEXTSTM ||
+                                (&(tokens->array[a+i]))->type == TokenType_EOF) break;
+                            a++;
+                        }
+                        i += a+1;
+                        continue;
+
+                    }
+                    else {
+                        raise(ErrorType_Syntax, U"Expected either = or ; after identifier", U"<stdin>",
+                        tokens->array[i+1].x,
+                        tokens->array[i+1].y);
+                    }
+
+                }
+                else {
+                    raise(ErrorType_Syntax, U"Identifier expected", U"<stdin>",
+                          tokens->array[i].x,
+                          tokens->array[i].y);
+                }
+                
+                
+                //printf("current tok: %s\n", utf32_to_utf8(Token_repr(&(tokens->array[i]))));
+
+                continue;
+
+            }
             
             /* ASSIGNMENT   identifier = expression; */
             else if ((&(tokens->array[i]))->type == TokenType_IDENTIFIER &&
@@ -1151,13 +1076,13 @@ Node *parse_body(TokenArray *tokens) {
                     name = tokens->array[i+1].data;
                 }
                 else {
-                    raise(ErrorType_Syntax, U"Identifier expected after enum", U"<raw>",
+                    raise(ErrorType_Syntax, U"Identifier expected after enum", U"<stdin>",
                           tokens->array[i+1].x,
                           tokens->array[i+1].y);
                 }
 
                 if (!(tokens->array[i+2].type == TokenType_LCURLY)) {
-                    raise(ErrorType_Syntax, U"Expected }", U"<raw>",
+                    raise(ErrorType_Syntax, U"Expected }", U"<stdin>",
                           tokens->array[i+2].x,
                           tokens->array[i+2].y);
                 }
@@ -1170,7 +1095,7 @@ Node *parse_body(TokenArray *tokens) {
                 if (!(tokens->array[i].type == TokenType_NEXTSTM ||
                       tokens->array[i].type == TokenType_EOF)) {
 
-                    raise(ErrorType_Syntax, U"Expected ;", U"<raw>",
+                    raise(ErrorType_Syntax, U"Expected ;", U"<stdin>",
                           tokens->array[i+2].x,
                           tokens->array[i+2].y);
                 }
@@ -1222,7 +1147,8 @@ Node *parse_body(TokenArray *tokens) {
             else if (u32isequal(token->data, U"else")) {
 
                 if (tokens->array[i+1].type != TokenType_LCURLY) {
-                    raise(ErrorType_Syntax, U"Expected {", U"<raw>", tokens->array[i+1].x, tokens->array[i+1].y);
+                    raise(ErrorType_Syntax, U"Expected {", U"<stdin>",
+                          tokens->array[i+1].x, tokens->array[i+1].y);
                 }
 
                 TokenArray *slice = TokenArray_slice(tokens, i+1);
@@ -1244,7 +1170,13 @@ Node *parse_body(TokenArray *tokens) {
                 TokenArray_free(slice);
                 i += _last_token_count;
 
+                if (tokens->array[i].type != TokenType_LCURLY) {
+                    raise(ErrorType_Syntax, U"Expected {", U"<stdin>",
+                          tokens->array[i].x, tokens->array[i].y);
+                }
+
                 TokenArray *slice2 = TokenArray_slice(tokens, i+1);
+                _body_count++;
                 Node *body = parse_body(slice2);
                 TokenArray_free(slice2);
                 i += body->body_tokens+2;
@@ -1263,7 +1195,13 @@ Node *parse_body(TokenArray *tokens) {
                 TokenArray_free(slice);
                 i += _last_token_count;
 
+                if (tokens->array[i].type != TokenType_LCURLY) {
+                    raise(ErrorType_Syntax, U"Expected {", U"<stdin>",
+                          tokens->array[i].x, tokens->array[i].y);
+                }
+
                 TokenArray *slice2 = TokenArray_slice(tokens, i+1);
+                _body_count++;
                 Node *body = parse_body(slice2);
                 TokenArray_free(slice2);
                 i += body->body_tokens+2;
@@ -1277,8 +1215,10 @@ Node *parse_body(TokenArray *tokens) {
             else if (u32isequal(token->data, U"for")) {
 
                 if (tokens->array[i+1].type == TokenType_IDENTIFIER) {
-                    if (tokens->array[i+2].type == TokenType_IDENTIFIER &&
-                        u32isequal(tokens->array[i+2].data, U"in")) {
+                    if (tokens->array[i+2].type == TokenType_OPERATOR &&
+                            u32isequal(tokens->array[i+2].data, U"in")) {
+
+                        Node *var = NodeVar_new(tokens->array[i+1].data);
                         
                         TokenArray *slice = TokenArray_slicet(tokens, i+3);
                         TokenArray_append(slice, Token_new(TokenType_EOF, U""));
@@ -1286,19 +1226,25 @@ Node *parse_body(TokenArray *tokens) {
                         TokenArray_free(slice);
                         i += _last_token_count+2;
 
+                        if (tokens->array[i].type != TokenType_LCURLY) {
+                            raise(ErrorType_Syntax, U"Expected {", U"<stdin>",
+                                tokens->array[i].x, tokens->array[i].y);
+                        }
+
                         TokenArray *slice2 = TokenArray_slice(tokens, i+1);
+                        _body_count++;
                         Node *body = parse_body(slice2);
                         TokenArray_free(slice2);
-                        i += body->body_tokens;
+                        i += body->body_tokens+1;
 
-                        NodeArray_append(node_array, NodeFor_new(NodeVar_new(tokens->array[i+1].data), expr, body));
+                        NodeArray_append(node_array, NodeFor_new(var, expr, body));
                     }
                     else {
-                        raise(ErrorType_Syntax, U"Missing 'in' keyword", U"<raw>", token->x, token->y);
+                        raise(ErrorType_Syntax, U"Missing in keyword", U"<stdin>", token->x, token->y);
                     }
                 }
                 else {
-                    raise(ErrorType_Syntax, U"Non-identifier after 'for'", U"<raw>", token->x, token->y);
+                    raise(ErrorType_Syntax, U"Non-identifier after for", U"<stdin>", token->x, token->y);
                 }
             }
 
@@ -1381,65 +1327,8 @@ OpType get_optype(u32char *tokenval) {
     else if (u32isequal(tokenval, U">=")) {
         return OpType_GE;
     }
-    else if (u32isequal(tokenval, U"has")) {
-        return OpType_HAS;
-    }
-}
-
-DeclType get_decltype(u32char *tokenval) {
-    if (u32isequal(tokenval, U"int")) {
-        return DeclType_INT32;
-    }
-    else if (u32isequal(tokenval, U"int8")) {
-        return DeclType_INT8;
-    }
-    else if (u32isequal(tokenval, U"int16")) {
-        return DeclType_INT16;
-    }
-    else if (u32isequal(tokenval, U"int32")) {
-        return DeclType_INT32;
-    }
-    else if (u32isequal(tokenval, U"int64")) {
-        return DeclType_INT64;
-    }
-    else if (u32isequal(tokenval, U"int128")) {
-        return DeclType_INT128;
-    }
-    else if (u32isequal(tokenval, U"uint")) {
-        return DeclType_UINT32;
-    }
-    else if (u32isequal(tokenval, U"uint8")) {
-        return DeclType_UINT8;
-    }
-    else if (u32isequal(tokenval, U"uint16")) {
-        return DeclType_UINT16;
-    }
-    else if (u32isequal(tokenval, U"uint32")) {
-        return DeclType_UINT32;
-    }
-    else if (u32isequal(tokenval, U"uint64")) {
-        return DeclType_UINT64;
-    }
-    else if (u32isequal(tokenval, U"uint128")) {
-        return DeclType_UINT128;
-    }
-    else if (u32isequal(tokenval, U"float")) {
-        return DeclType_FLOAT32;
-    }
-    else if (u32isequal(tokenval, U"float32")) {
-        return DeclType_FLOAT32;
-    }
-    else if (u32isequal(tokenval, U"float64")) {
-        return DeclType_FLOAT64;
-    }
-    else if (u32isequal(tokenval, U"booU")) {
-        return DeclType_BOOL;
-    }
-    else if (u32isequal(tokenval, U"string")) {
-        return DeclType_STRING;
-    }
-    else if (u32isequal(tokenval, U"buffer")) {
-        return DeclType_BUFFER;
+    else if (u32isequal(tokenval, U"in")) {
+        return OpType_IN;
     }
 }
 
@@ -1481,7 +1370,7 @@ Node *parse_subscript(TokenArray *tokens, Node *node) {
 
         /* Instant close [] */
         if (current_token(tokens)->type == TokenType_RSQRB) {
-            raise(ErrorType_Syntax, U"Subscripting with nothing", U"<raw>",
+            raise(ErrorType_Syntax, U"Subscripting with nothing", U"<stdin>",
                     current_token(tokens)->x,
                     current_token(tokens)->y);
         }
@@ -1495,7 +1384,7 @@ Node *parse_subscript(TokenArray *tokens, Node *node) {
                    parse_child(tokens, NodeSubscript_new(node, expr))));
         }
         else {
-            raise(ErrorType_Syntax, U"Expected ]", U"<raw>",
+            raise(ErrorType_Syntax, U"Expected ]", U"<stdin>",
                     current_token(tokens)->x,
                     current_token(tokens)->y);
         }
@@ -1518,7 +1407,7 @@ Node *parse_call(TokenArray *tokens, Node *node) {
             next_valid += expect_token(tokens, TokenType_OPERATOR);
             next_valid += expect_token(tokens, TokenType_PERIOD);
             if (!next_valid) {
-                raise(ErrorType_Syntax, u32join(U"Unexpected symbol '", u32join(tokens->array[_token_index+1].data, U"' after function calU")), U"<raw>", 0, 0);
+                raise(ErrorType_Syntax, u32join(U"Unexpected symbol '", u32join(tokens->array[_token_index+1].data, U"' after function call")), U"<stdin>", 0, 0);
             }
 
             next_token(tokens);
@@ -1544,13 +1433,27 @@ Node *parse_call(TokenArray *tokens, Node *node) {
                     parse_child(tokens, NodeCall_new(node, args))));
         }
         else {
-            raise(ErrorType_Syntax, U"Expected ;", U"<raw>",
+            raise(ErrorType_Syntax, U"Expected ;", U"<stdin>",
                     current_token(tokens)->x,
                     current_token(tokens)->y);
         }
     }
 
     return node;
+}
+
+/**
+ * @brief Parse an expression
+ * 
+ * @param tokens Token array to parse
+ * @return Node's pointer
+ */
+Node *parse_expr(TokenArray *tokens) {
+    _token_index = 0;
+    Node *expr = parse_expr_EXPR(tokens);
+    _last_token_count = _token_index+1;
+    _token_index = 0;
+    return expr;
 }
 
 Node *parse_expr_FACTOR(TokenArray *tokens) {
@@ -1575,7 +1478,7 @@ Node *parse_expr_FACTOR(TokenArray *tokens) {
 
             /* Instant close [] */
             if (current_token(tokens)->type == TokenType_RSQRB) {
-                raise(ErrorType_Syntax, U"Subscripting with nothing", U"<raw>",
+                raise(ErrorType_Syntax, U"Subscripting with nothing", U"<stdin>",
                       current_token(tokens)->x,
                       current_token(tokens)->y);
             }
@@ -1588,7 +1491,7 @@ Node *parse_expr_FACTOR(TokenArray *tokens) {
                        parse_child(tokens, NodeSubscript_new(NodeString_new(token->data), expr)));
             }
             else {
-                raise(ErrorType_Syntax, U"Expected ]", U"<raw>",
+                raise(ErrorType_Syntax, U"Expected ]", U"<stdin>",
                       current_token(tokens)->x,
                       current_token(tokens)->y);
             }
@@ -1609,7 +1512,7 @@ Node *parse_expr_FACTOR(TokenArray *tokens) {
             next_token(tokens);
             
             if (current_token(tokens)->type != TokenType_NUMERIC) {
-                raise(ErrorType_Syntax, U"Can't subscript integer literal", U"<raw>",
+                raise(ErrorType_Syntax, U"Can't subscript integer literal", U"<stdin>",
                 current_token(tokens)->x,
                 current_token(tokens)->y);
             }
@@ -1640,7 +1543,7 @@ Node *parse_expr_FACTOR(TokenArray *tokens) {
                 next_valid += expect_token(tokens, TokenType_OPERATOR);
                 next_valid += expect_token(tokens, TokenType_PERIOD);
                 if (!next_valid) {
-                    raise(ErrorType_Syntax, u32join(U"Unexpected symbol '", u32join(tokens->array[_token_index+1].data, U"' after function calU")), U"<raw>", 0, 0);
+                    raise(ErrorType_Syntax, u32join(U"Unexpected symbol '", u32join(tokens->array[_token_index+1].data, U"' after function calU")), U"<stdin>", 0, 0);
                 }
 
                 next_token(tokens);
@@ -1666,7 +1569,7 @@ Node *parse_expr_FACTOR(TokenArray *tokens) {
                        parse_child(tokens, NodeCall_new(NodeFuncBase_new(token->data), args))));
             }
             else {
-                raise(ErrorType_Syntax, U"Expected ;", U"<raw>",
+                raise(ErrorType_Syntax, U"Expected ;", U"<stdin>",
                       current_token(tokens)->x,
                       current_token(tokens)->y);
             }
@@ -1683,7 +1586,7 @@ Node *parse_expr_FACTOR(TokenArray *tokens) {
 
         /* Instant close () */
         if (current_token(tokens)->type == TokenType_RPAREN) {
-            raise(ErrorType_Syntax, U"Expression expected between parantheses", U"<raw>", token->x, token->y);
+            raise(ErrorType_Syntax, U"Expression expected between parantheses", U"<stdin>", token->x, token->y);
         }
 
         Node *expr = parse_expr_EXPR(tokens);
@@ -1693,7 +1596,38 @@ Node *parse_expr_FACTOR(TokenArray *tokens) {
             return parse_subscript(tokens, expr);
         }
         else {
-            raise(ErrorType_Syntax, U"Expected )", U"<raw>", current_token(tokens)->x, current_token(tokens)->y);
+            raise(ErrorType_Syntax, U"Expected )", U"<stdin>", current_token(tokens)->x, current_token(tokens)->y);
+        }
+    }
+
+    /* Array Initialization [ Expression, ... ] */
+    else if (token->type == TokenType_LSQRB) {
+        next_token(tokens);
+
+        /* Instant close () */
+        if (current_token(tokens)->type == TokenType_RPAREN) {
+            raise(ErrorType_Syntax, U"Expression expected between square parantheses", U"<stdin>", token->x, token->y);
+        }
+
+        /* Expressions [expr1, expr2, ...] */
+        NodeArray *content = NodeArray_new(1);
+        
+        NodeArray_append(content, parse_expr_EXPR(tokens));
+
+        while (current_token(tokens)->type == TokenType_COMMA) {
+            next_token(tokens);
+            NodeArray_append(content, parse_expr_EXPR(tokens));
+        }
+
+        if (current_token(tokens)->type == TokenType_RSQRB) {
+            next_token(tokens);
+            return parse_subscript(tokens,
+                   parse_child(tokens, NodeNArray_new(content, false)));
+        }
+        else {
+            raise(ErrorType_Syntax, U"Expected ;", U"<stdin>",
+                    current_token(tokens)->x,
+                    current_token(tokens)->y);
         }
     }
 }
@@ -1745,7 +1679,7 @@ Node *parse_expr_EXPR(TokenArray *tokens) {
                u32isequal(current_token(tokens)->data, U"and") ||
                u32isequal(current_token(tokens)->data, U"or")  ||
                u32isequal(current_token(tokens)->data, U"xor") ||
-               u32isequal(current_token(tokens)->data, U"has")) {
+               u32isequal(current_token(tokens)->data, U"in")) {
 
                     OpType optype = get_optype(current_token(tokens)->data);
                     next_token(tokens);
@@ -1760,21 +1694,12 @@ Node *parse_expr_EXPR(TokenArray *tokens) {
           current_token(tokens)->type == TokenType_RCURLY  ||
           current_token(tokens)->type == TokenType_COMMA   ||
           current_token(tokens)->type == TokenType_RSQRB)) {
-            raise(ErrorType_Syntax, U"Expected ;", U"<raw>", current_token(tokens)->x, current_token(tokens)->y);
-        }
+
+            printf("failed tok: %s\n", utf32_to_utf8(Token_repr(current_token(tokens))));
+        //if (!(current_token(tokens)->type == TokenType_OPERATOR && u32isequal(current_token(tokens)->data, U">"))) {
+            raise(ErrorType_Syntax, U"Expected ;", U"<stdin>", current_token(tokens)->x, current_token(tokens)->y);
+        //}
+    }
 
     return left;
-}
-
-/**
- * @brief Parse an expression
- * 
- * @param tokens Token array to parse
- * @return Node's pointer
- */
-Node *parse_expr(TokenArray *tokens) {
-    Node *expr = parse_expr_EXPR(tokens);
-    _last_token_count = _token_index+1;
-    _token_index = 0;
-    return expr;
 }

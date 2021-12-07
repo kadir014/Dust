@@ -22,17 +22,6 @@
 
 
 /**
- * @brief Get GNU C compiler's version in major.minor.patch format
- * @return Version string
- */
-u32char *get_gcc_version() {
-    char gccver[11];
-    sprintf(gccver, "%d.%d.%d", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
-    return ascii_to_utf32(gccver);
-}
-
-
-/**
  * @brief Get generic system name
  * 
  * @return String of system name
