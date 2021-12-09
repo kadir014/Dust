@@ -8,7 +8,7 @@ Here is the list of built-in data types included in Dust
 - [Buffers](#Buffers)
 
 ## Integers
-An integer is a number without a fractional component. Integers are either signed or unsigned, keyword for unsigned ones starts with `uint` and signed ones starts with `int`. \
+An integer is a number without a fractional component. Integers are either signed or unsigned, keyword for unsigned ones starts with `uint` and signed ones starts with `int`.
 
 | Signed   | Unsigned | Memory              |
 |----------|----------|---------------------|

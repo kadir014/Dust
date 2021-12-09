@@ -355,7 +355,7 @@ if __name__ == "__main__":
             print(f"{Color.fglightred}[WARNING]{Color.reset} given process count ({option_handler.cores})" + \
                   f" exceeds your machine's core count ({CPU_COUNT})\n")
 
-        print(f"Starting building Dust")
+        print("Starting building Dust")
 
         if platform.system() == "Windows":
             system = f"Windows {platform.release()} ({platform.win32_ver()[1]}, {platform.win32_ver()[2]})"

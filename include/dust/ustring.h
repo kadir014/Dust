@@ -74,6 +74,8 @@ u32char *u32slice(u32char *str, size_t start, size_t end);
 
 u32char *u32fill(u32char *dest, u32char *str, size_t amount);
 
+bool u32cisalnum(u32char chr);
+
 bool u32cisdigit(u32char chr);
 
 bool u32cisxdigit(u32char chr);

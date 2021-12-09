@@ -15,5 +15,6 @@ include_old/
 build_old.py
 
 tests.exe
+tests_old.c
 
 bot.py

@@ -59,6 +59,7 @@ typedef enum {
     OpType_XOR,
     OpType_NOT,
     OpType_POW,
+    OpType_MOD,
     OpType_RANGE,
     OpType_EQ,
     OpType_NEQ,
@@ -109,6 +110,7 @@ struct _Node {
 
         struct {
             u32char *assign_var;
+            u32char *assign_op;
             struct _Node *assign_expr;
         };
 
@@ -209,7 +211,7 @@ Node *NodeDecl_new(Node *type, u32char *variable, Node *expression);
 
 Node *NodeDecln_new(Node *type, u32char *variable);
 
-Node *NodeAssign_new(u32char *variable, Node *expression);
+Node *NodeAssign_new(u32char *variable, u32char *op, Node *expression);
 
 Node *NodeBinOp_new(OpType op, Node *left, Node *right);
 

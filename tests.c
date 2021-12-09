@@ -12,374 +12,287 @@
 */
 
 #include <stdio.h>
-#include <stdlib.h>
-#include "dust/ansi.h"
-#include "dust/u8string.h"
-#include "dust/platform.h"
+#include <string.h>
+#include <stdbool.h>
+#include "dust/ustring.h"
 #include "dust/tokenizer.h"
 #include "dust/parser.h"
 
 
-u8char *expect_string(u8char *value, u8char *expect) {
-    if (u8isequal(value, expect)) {
-        return L"OK";
-    }
-    else {
-        return u8join(L"Expected '", u8join(expect, u8join(L"' but got '", u8join(value, L"'\n"))));
-    }
-}
+char *CURRENT_TEST;
+int TESTS = 0;
+int FAILS = 0;
 
-u8char *expect_int(int value, int expect) {
+/**
+ * @brief Compare two integers and print result message
+ * 
+ * @param value Value
+ * @param expect Expected value
+ */
+void expect_int(int value, int expect) {
+    TESTS++;
     if (value == expect) {
-        return L"OK";
+        printf("[PASSED] %s\n", CURRENT_TEST);
     }
     else {
-        u8char *ws = malloc(sizeof(u8char)*100);
-        swprintf(ws, 100, L"Expected '%d' but got '%d'", expect, value);
-        return ws;
+        printf("[FAILED] %s: Expected (int)%d but got (int)%d\n",
+                CURRENT_TEST,
+                expect, value);
+        FAILS++;
     }
 }
 
-u8char *expect_float(double value, double expect) {
-    if (value == expect) {
-        return L"OK";
+/**
+ * @brief Compare two float and print result message
+ * 
+ * @param value Value
+ * @param expect Expected value
+ */
+void expect_float(float value, float expect) {
+    TESTS++;
+    if (value == expect)
+        printf("[PASSED] %s\n", CURRENT_TEST);
+
+    else
+        printf("[FAILED] %s: Expected (float)%f but got (float)%f\n",
+                CURRENT_TEST,
+                expect, value);
+        FAILS++;
+}
+
+/**
+ * @brief Expect true boolean value
+ * 
+ * @param value Value
+ */
+void expect_true(bool value) {
+    TESTS++;
+    if (value) {
+        printf("[PASSED] %s\n", CURRENT_TEST);
     }
     else {
-        u8char *ws = malloc(sizeof(u8char)*100);
-        swprintf(ws, 100, L"Expected '%f' but got '%f'", expect, value);
-        return ws;
+        printf("[FAILED] %s: Expected true\n", CURRENT_TEST);
+        FAILS++;
     }
 }
 
-u8char *expect_true(int value) {
-    return expect_int(value, 1);
+/**
+ * @brief Expect false boolean value
+ * 
+ * @param value Value
+ */
+void expect_false(bool value) {
+    TESTS++;
+    if (!value) {
+        printf("[PASSED] %s\n", CURRENT_TEST);
+    }
+    else {
+        printf("[FAILED] %s: Expected false\n", CURRENT_TEST);
+        FAILS++;
+    }
 }
 
+/**
+ * @brief Compare two 4byte strings and print result message
+ * 
+ * @param value Value
+ * @param expect Expected value
+ */
+void expect_u32string(u32char *value, u32char *expect) {
+    TESTS++;
+    if (u32isequal(value, expect))
+        printf("[PASSED] %s\n", CURRENT_TEST);
 
-int _TESTS   = 0;
-int _FAILS   = 0;
-int _IGNORES = 0;
-
-u8char *test_tokenizer__Token_new() {
-    _TESTS++;
-
-    Token *token1 = Token_new(TokenType_IDENTIFIER, L"hello");
-    Token *token2 = Token_new(TokenType_OPERATOR, L"+");
-    Token *token3 = Token_new(TokenType_NEXTSTM, L"");
-
-    u8char *test1 = expect_string(token1->data, L"hello");
-    u8char *test2 = expect_int   (token1->type, TokenType_IDENTIFIER);
-    u8char *test3 = expect_string(token2->data, L"+");
-    u8char *test4 = expect_int   (token2->type, TokenType_OPERATOR);
-    u8char *test5 = expect_string(token3->data, L"");
-    u8char *test6 = expect_int   (token3->type, TokenType_NEXTSTM);
-
-    Token_free(token1);
-    Token_free(token2);
-    Token_free(token3);
-
-    if      (!u8isequal(test1, L"OK")) {_FAILS++; return test1;}
-    else if (!u8isequal(test2, L"OK")) {_FAILS++; return test2;}
-    else if (!u8isequal(test3, L"OK")) {_FAILS++; return test3;}
-    else if (!u8isequal(test4, L"OK")) {_FAILS++; return test4;}
-    else if (!u8isequal(test5, L"OK")) {_FAILS++; return test5;}
-    else if (!u8isequal(test6, L"OK")) {_FAILS++; return test6;}
-    else                               {return L"OK";}
+    else
+        printf("[FAILED] %s: Expected (u32string)'%s' but got (u32string)'%s'\n",
+                CURRENT_TEST,
+                utf32_to_utf8(expect), utf32_to_utf8(value));
+        FAILS++;
 }
 
-u8char *test_tokenizer__Token_repr() {
-    _TESTS++;
+/**
+ * @brief Compare two strings and print result message
+ * 
+ * @param value Value
+ * @param expect Expected value
+ */
+void expect_string(char *value, char *expect) {
+    TESTS++;
+    if (!strcmp(value, expect))
+        printf("[PASSED] %s\n", CURRENT_TEST);
 
-    Token *token1 = Token_new(TokenType_IDENTIFIER, L"hello");
-    Token *token2 = Token_new(TokenType_OPERATOR, L"+");
-    Token *token3 = Token_new(TokenType_NEXTSTM, L"");
-
-    u8char *test1 = expect_string(Token_repr(token1), L"TokenType_IDENTIFIER   hello");
-    u8char *test2 = expect_string(Token_repr(token2), L"TokenType_OPERATOR     +");
-    u8char *test3 = expect_string(Token_repr(token3), L"TokenType_NEXTSTM      ");
-
-    Token_free(token1);
-    Token_free(token2);
-    Token_free(token3);
-
-    if      (!u8isequal(test1, L"OK")) {_FAILS++; return test1;}
-    else if (!u8isequal(test2, L"OK")) {_FAILS++; return test2;}
-    else if (!u8isequal(test3, L"OK")) {_FAILS++; return test3;}
-    else                               {return L"OK";}
+    else
+        printf("[FAILED] %s: Expected (string)'%s' but got (string)'%s'\n",
+                CURRENT_TEST,
+                expect, value);
+        FAILS++;
 }
 
-u8char *test_tokenizer__TokenArray_new() {
-    _TESTS++;
-
-    TokenArray *token_array = TokenArray_new(1);
-
-    TokenArray_append(token_array, Token_new(TokenType_IDENTIFIER, L"hello"));
-    TokenArray_append(token_array, Token_new(TokenType_OPERATOR, L"+"));
-    TokenArray_append(token_array, Token_new(TokenType_NEXTSTM, L""));
-
-    u8char *test1 = expect_string(token_array->array[0].data, L"hello");
-    u8char *test2 = expect_int   (token_array->array[0].type, TokenType_IDENTIFIER);
-    u8char *test3 = expect_string(token_array->array[1].data, L"+");
-    u8char *test4 = expect_int   (token_array->array[1].type, TokenType_OPERATOR);
-    u8char *test5 = expect_string(token_array->array[2].data, L"");
-    u8char *test6 = expect_int   (token_array->array[2].type, TokenType_NEXTSTM);
-    u8char *test7 = expect_int   (token_array->used, 3);
-
-    TokenArray_free(token_array);
-
-    if      (!u8isequal(test1, L"OK")) {_FAILS++; return test1;}
-    else if (!u8isequal(test2, L"OK")) {_FAILS++; return test2;}
-    else if (!u8isequal(test3, L"OK")) {_FAILS++; return test3;}
-    else if (!u8isequal(test4, L"OK")) {_FAILS++; return test4;}
-    else if (!u8isequal(test5, L"OK")) {_FAILS++; return test5;}
-    else if (!u8isequal(test6, L"OK")) {_FAILS++; return test6;}
-    else if (!u8isequal(test7, L"OK")) {_FAILS++; return test7;}
-    else                               {return L"OK";}
-}
-
-u8char *test_tokenizer__TokenArray_append() {
-    _TESTS++;
-
-    TokenArray *token_array = TokenArray_new(1);
-
-    u8char *test1 = expect_int   (token_array->used, 0);
-
-    TokenArray_append(token_array, Token_new(TokenType_NEXTSTM, L""));
-    u8char *test2 = expect_int   (token_array->used, 1);
-
-    TokenArray_append(token_array, Token_new(TokenType_NEXTSTM, L""));
-    u8char *test3 = expect_int   (token_array->used, 2);
-
-    TokenArray_append(token_array, Token_new(TokenType_NEXTSTM, L""));
-    TokenArray_append(token_array, Token_new(TokenType_NEXTSTM, L""));
-    TokenArray_append(token_array, Token_new(TokenType_NEXTSTM, L""));
-    u8char *test4 = expect_int   (token_array->used, 5);
-
-    TokenArray_free(token_array);
-
-    if      (!u8isequal(test1, L"OK")) {_FAILS++; return test1;}
-    else if (!u8isequal(test2, L"OK")) {_FAILS++; return test2;}
-    else if (!u8isequal(test3, L"OK")) {_FAILS++; return test3;}
-    else if (!u8isequal(test4, L"OK")) {_FAILS++; return test4;}
-    else                               {return L"OK";}
-}
 
 /*
-  TODO:
-  - test NodeEnum_new
-  - test NodeBody_new
-  - test NodeIf_new
-  - test NodeElif_new
-  - test NodeElse_new
-  - test NodeRepeat_new
-  - test NodeWhile_new
-  - test NodeFor_new
+  TEST SUITES
 */
-u8char *test_parser__Node_new() {
-    _TESTS++;
 
-    Node *node1  = NodeInteger_new(5);
-    Node *node2  = NodeFloat_new(3.2);
-    Node *node3  = NodeString_new(L"hello");
-    Node *node4  = NodeVar_new(L"somevar");
-    Node *node5  = NodeDecl_new(DeclType_INT32, L"intvar", NodeInteger_new(2));
-    Node *node6  = NodeAssign_new(L"floatvar", NodeFloat_new(1.7));
-    Node *node7  = NodeBinOp_new(OpType_ADD, node1, node2);
-    Node *node8  = NodeUnaryOp_new(OpType_SUB, node3);
-    Node *node9  = NodeImport_new(L"module");
-    Node *node10 = NodeImportFrom_new(L"module", L"member");
-    Node *node11 = NodeSubscript_new(node3, node1);
-    Node *node12 = NodeChild_new(node1, node2);
-
-    u8char *test1  = expect_int   (node1->integer, 5);
-    u8char *test2  = expect_int   (node1->type, NodeType_INTEGER);
-    u8char *test3  = expect_float (node2->floating, 3.2);
-    u8char *test4  = expect_int   (node2->type, NodeType_FLOAT);
-    u8char *test5  = expect_string(node3->string, L"hello");
-    u8char *test6  = expect_int   (node3->type, NodeType_STRING);
-    u8char *test7  = expect_string(node4->variable, L"somevar");
-    u8char *test8  = expect_int   (node4->type, NodeType_VAR);
-    u8char *test9  = expect_string(node5->decl_var, L"intvar");
-    u8char *test10 = expect_int   (node5->decl_expr->integer, 2);
-    u8char *test11 = expect_int   (node5->type, NodeType_DECL);
-    u8char *test12 = expect_string(node6->assign_var, L"floatvar");
-    u8char *test13 = expect_float (node6->assign_expr->floating, 1.7);
-    u8char *test14 = expect_int   (node6->type, NodeType_ASSIGN);
-    u8char *test15 = expect_int   (node7->bin_optype, OpType_ADD);
-    u8char *test16 = expect_int   (node7->type, NodeType_BINOP);
-    u8char *test17 = expect_int   (node8->unary_optype, OpType_SUB);
-    u8char *test18 = expect_int   (node8->type, NodeType_UNARYOP);
-    u8char *test19 = expect_string(node9->import_module, L"module");
-    u8char *test20 = expect_int   (node9->type, NodeType_IMPORT);
-    u8char *test21 = expect_string(node10->import_module, L"module");
-    u8char *test22 = expect_string(node10->import_member, L"member");
-    u8char *test23 = expect_int   (node10->type, NodeType_IMPORTF);
-
-    Node_free(node1);
-    Node_free(node2);
-    Node_free(node3);
-    Node_free(node4);
-    Node_free(node5);
-    Node_free(node6);
-    Node_free(node7);
-    Node_free(node8);
-    Node_free(node9);
-    Node_free(node10);
-    Node_free(node11);
-    Node_free(node12);
-
-    if      (!u8isequal(test1, L"OK"))  {_FAILS++; return test1;}
-    else if (!u8isequal(test2, L"OK"))  {_FAILS++; return test2;}
-    else if (!u8isequal(test3, L"OK"))  {_FAILS++; return test3;}
-    else if (!u8isequal(test4, L"OK"))  {_FAILS++; return test4;}
-    else if (!u8isequal(test5, L"OK"))  {_FAILS++; return test5;}
-    else if (!u8isequal(test6, L"OK"))  {_FAILS++; return test6;}
-    else if (!u8isequal(test7, L"OK"))  {_FAILS++; return test7;}
-    else if (!u8isequal(test8, L"OK"))  {_FAILS++; return test8;}
-    else if (!u8isequal(test9, L"OK"))  {_FAILS++; return test9;}
-    else if (!u8isequal(test10, L"OK")) {_FAILS++; return test10;}
-    else if (!u8isequal(test11, L"OK")) {_FAILS++; return test11;}
-    else if (!u8isequal(test12, L"OK")) {_FAILS++; return test12;}
-    else if (!u8isequal(test13, L"OK")) {_FAILS++; return test13;}
-    else if (!u8isequal(test14, L"OK")) {_FAILS++; return test14;}
-    else if (!u8isequal(test15, L"OK")) {_FAILS++; return test15;}
-    else if (!u8isequal(test16, L"OK")) {_FAILS++; return test16;}
-    else if (!u8isequal(test17, L"OK")) {_FAILS++; return test17;}
-    else if (!u8isequal(test18, L"OK")) {_FAILS++; return test18;}
-    else if (!u8isequal(test19, L"OK")) {_FAILS++; return test19;}
-    else if (!u8isequal(test20, L"OK")) {_FAILS++; return test20;}
-    else if (!u8isequal(test21, L"OK")) {_FAILS++; return test21;}
-    else if (!u8isequal(test22, L"OK")) {_FAILS++; return test22;}
-    else if (!u8isequal(test23, L"OK")) {_FAILS++; return test23;}
-    else                                {return L"OK";}
+void TEST__u32count() {
+    u32char *str = U"hello, this is the test thesuite!";
+    expect_int(u32count(str, U"the"), 2);
 }
 
-u8char *test_parser__NodeArray_new() {
-    _TESTS++;
-
-    NodeArray *node_array = NodeArray_new(1);
-
-    NodeArray_append(node_array, NodeInteger_new(5));
-    NodeArray_append(node_array, NodeString_new(L"hello"));
-    NodeArray_append(node_array, NodeVar_new(L"somevar"));
-
-    u8char *test1 = expect_int   (node_array->array[0].integer, 5);
-    u8char *test2 = expect_int   (node_array->array[0].type, NodeType_INTEGER);
-    u8char *test3 = expect_string(node_array->array[1].string, L"hello");
-    u8char *test4 = expect_int   (node_array->array[1].type, NodeType_STRING);
-    u8char *test5 = expect_string(node_array->array[2].variable, L"somevar");
-    u8char *test6 = expect_int   (node_array->array[2].type, NodeType_VAR);
-    u8char *test7 = expect_int   (node_array->used, 3);
-
-    NodeArray_free(node_array);
-
-    if      (!u8isequal(test1, L"OK")) {_FAILS++; return test1;}
-    else if (!u8isequal(test2, L"OK")) {_FAILS++; return test2;}
-    else if (!u8isequal(test3, L"OK")) {_FAILS++; return test3;}
-    else if (!u8isequal(test4, L"OK")) {_FAILS++; return test4;}
-    else if (!u8isequal(test5, L"OK")) {_FAILS++; return test5;}
-    else if (!u8isequal(test6, L"OK")) {_FAILS++; return test6;}
-    else if (!u8isequal(test7, L"OK")) {_FAILS++; return test7;}
-    else                               {return L"OK";}
+void TEST__u32countchr() {
+    u32char *str = U"hello, this is the test suite!i";
+    expect_int(u32countchr(str, U'i'), 4);
 }
 
-u8char *test_parser__NodeArray_append() {
-    _TESTS++;
-
-    NodeArray *node_array = NodeArray_new(1);
-
-    u8char *test1 = expect_int   (node_array->used, 0);
-
-    NodeArray_append(node_array, NodeInteger_new(0));
-    u8char *test2 = expect_int   (node_array->used, 1);
-
-    NodeArray_append(node_array, NodeInteger_new(0));
-    u8char *test3 = expect_int   (node_array->used, 2);
-
-    NodeArray_append(node_array, NodeInteger_new(0));
-    NodeArray_append(node_array, NodeInteger_new(0));
-    NodeArray_append(node_array, NodeInteger_new(0));
-    u8char *test4 = expect_int   (node_array->used, 5);
-
-    NodeArray_free(node_array);
-
-    if      (!u8isequal(test1, L"OK")) {_FAILS++; return test1;}
-    else if (!u8isequal(test2, L"OK")) {_FAILS++; return test2;}
-    else if (!u8isequal(test3, L"OK")) {_FAILS++; return test3;}
-    else if (!u8isequal(test4, L"OK")) {_FAILS++; return test4;}
-    else                               {return L"OK";}
+void TEST__u32len() {
+    u32char *str = U"hello, this is the test suite!";
+    expect_int(u32len(str), 31);
 }
 
-/*
-  TODO:
-  - test u8fill
-  - u8strip segfaults
-*/
-u8char *test_u8string() {
-    _TESTS++;
-
-    u8char *test1  = expect_int   (u8len(L"hello"), 5);
-    u8char *test2  = expect_int   (u8size(L"hello"), 5*sizeof(u8char));
-    u8char *test3  = expect_string(u8join(L"hello", L"world"), L"helloworld");
-    //u8char *test4  = expect_string(u8strip(L"  abc  "), L"abc");
-    u8char *test5  = expect_string(u8upper(L"hello"), L"HELLO");
-    u8char *test6  = expect_string(u8lower(L"HELLO"), L"hello");
-    u8char *test7  = expect_int   (u8find(L"helloworld", L"llo"), 3);
-    u8char *test8  = expect_true  (u8contains(L"hello", L"llo"));
-    u8char *test9  = expect_true  (u8startswith(L"hello", L"he"));
-    u8char *test10 = expect_true  (u8endswith(L"world", L"ld"));
-    u8char *test11 = expect_true  (u8isequal(L"abc", L"abc"));
-    u8char *test12 = expect_true  (u8isdigit(L"012345"));
-    u8char *test13 = expect_true  (u8isidentifier(L"_DUST0"));
-    u8char *test14 = expect_true  (u8isempty(L"   "));
-    u8char *test15 = expect_string(u8replace(L"hello", L"l", L"z"), L"hezzo");
-    u8char *test16 = expect_string(u8slice(L"helloworld", 4, 9), L"world");
-    u8char *test17 = expect_string(ctou8("hello"), L"hello");
-
-    if      (!u8isequal(test1, L"OK"))  {_FAILS++; return test1;}
-    else if (!u8isequal(test2, L"OK"))  {_FAILS++; return test2;}
-    else if (!u8isequal(test3, L"OK"))  {_FAILS++; return test3;}
-    //else if (!u8isequal(test4, L"OK"))  {_FAILS++; return test4;}
-    else if (!u8isequal(test5, L"OK"))  {_FAILS++; return test5;}
-    else if (!u8isequal(test6, L"OK"))  {_FAILS++; return test6;}
-    else if (!u8isequal(test7, L"OK"))  {_FAILS++; return test7;}
-    else if (!u8isequal(test8, L"OK"))  {_FAILS++; return test8;}
-    else if (!u8isequal(test9, L"OK"))  {_FAILS++; return test9;}
-    else if (!u8isequal(test10, L"OK")) {_FAILS++; return test10;}
-    else if (!u8isequal(test11, L"OK")) {_FAILS++; return test11;}
-    else if (!u8isequal(test12, L"OK")) {_FAILS++; return test12;}
-    else if (!u8isequal(test13, L"OK")) {_FAILS++; return test13;}
-    else if (!u8isequal(test14, L"OK")) {_FAILS++; return test14;}
-    else if (!u8isequal(test15, L"OK")) {_FAILS++; return test15;}
-    else if (!u8isequal(test16, L"OK")) {_FAILS++; return test16;}
-    else if (!u8isequal(test17, L"OK")) {_FAILS++; return test17;}
-    else                                {return L"OK";}
+void TEST__u32isequal() {
+    u32char *str1 = U"hello, this is the test suite!";
+    u32char *str2 = U"hello, this is the test suite! ";
+    expect_false(u32isequal(str1, str2));
 }
+
+void TEST__u32concat() {
+    u32char str[40] = U"hello, this is";
+    u32concat(str, U" the test suite!");
+    expect_u32string(U"hello, this is the test suite!", str);
+}
+
+void TEST__u32copy() {
+    u32char str[40] = U"";
+    u32copy(str, U"hello, this is the test suite!");
+    expect_u32string(U"hello, this is the test suite!", str);
+}
+
+void TEST__u32findchr() {
+    u32char *str = U"hello, this is the test suite!";
+    expect_int(u32findchr(str, U't'), 7);
+}
+
+void TEST__u32rfindchr() {
+    u32char *str = U"hello, this is the test suite!";
+    expect_int(u32rfindchr(str, U't'), 2);
+}
+
+void TEST__u32find() {
+    u32char *str = U"hello, this is the test suite!";
+    expect_int(u32find(str, U"the"), 15);
+}
+
+void TEST__u32rfind() {
+    u32char *str = U"hello, this is the test suite!";
+    expect_int(u32rfind(str, U"the"), 14);
+}
+
+void TEST__u32cisalnum() {
+    u32char chr = U'a';
+    expect_true(u32cisalnum(chr));
+}
+
+void TEST__u32cisdigit() {
+    u32char chr1 = U'5';
+    expect_true(u32cisdigit(chr1));
+
+    u32char chr2 = U'a';
+    expect_false(u32cisdigit(chr2));
+}
+
+void TEST__u32cisxdigit() {
+    u32char chr1 = U'5';
+    expect_true(u32cisxdigit(chr1));
+
+    u32char chr2 = U'a';
+    expect_true(u32cisxdigit(chr2));
+
+    u32char chr3 = U't';
+    expect_false(u32cisxdigit(chr3));
+}
+
+void TEST__u32cisspace() {
+    u32char chr1 = U'a';
+    expect_false(u32cisspace(chr1));
+
+    u32char chr2 = U' ';
+    expect_true(u32cisspace(chr2));
+}
+
+void TEST__u32push() {
+    u32char *str = (u32char *)malloc(sizeof(u32char));
+    str[0] = U'\0';
+    str = u32push(str, U'o');
+    expect_u32string(str, U"o");
+}
+
+void TEST__u32join() {
+    u32char *str = U"hello ";
+    expect_u32string(u32join(str, U"world"), U"hello world");
+}
+
+void TEST__u32replace() {
+    u32char *str = U"hello ive been working on this forever.";
+    expect_u32string(u32replace(str, U"e", U"ğ"), U"hğllo ivğ bğğn working on this forğvğr.");
+}
+
+void TEST__u32strip() {
+    u32char str[12] = U"     hello ";
+    expect_u32string(u32strip(str), U"hello");
+}
+
+void TEST__u32slice() {
+    u32char *str = U"hello world";
+    expect_u32string(u32slice(str, 5, 10), U"world");
+}
+
+void TEST__u32startswith() {
+    u32char *str = U"hello world";
+    expect_true(u32startswith(str, U"hello"));
+}
+
+void TEST__u32endswith() {
+    u32char *str = U"hello world";
+    expect_true(u32endswith(str, U"orld"));
+}
+
+void TEST__u32contains() {
+    u32char *str = U"hello world";
+    expect_true(u32contains(str, U"orl"));
+}
+
+void TEST__u32isdigit() {
+    u32char *str = U"136071324";
+    expect_true(u32isdigit(str));
+}
+
 
 int main() {
-    u8char *result_Token_new         = test_tokenizer__Token_new();
-    u8char *result_Token_repr        = test_tokenizer__Token_repr();
-    u8char *result_TokenArray_new    = test_tokenizer__TokenArray_new();
-    u8char *result_TokenArray_append = test_tokenizer__TokenArray_append();
-    u8char *result_Node_new          = test_parser__Node_new();
-    u8char *result_NodeArray_new     = test_parser__NodeArray_new();
-    u8char *result_NodeArray_append  = test_parser__NodeArray_append();
-    u8char *result_u8string          = test_u8string();
+    CURRENT_TEST = "u32count   ";   TEST__u32count();
+    CURRENT_TEST = "u32countchr";   TEST__u32countchr();
+    CURRENT_TEST = "u32len";        TEST__u32len();
+    CURRENT_TEST = "u32isequal";    TEST__u32isequal();
+    CURRENT_TEST = "u32concat";     TEST__u32concat();
+    CURRENT_TEST = "u32copy";       TEST__u32copy();
+    CURRENT_TEST = "u32findchr";    TEST__u32findchr();
+    CURRENT_TEST = "u32rfindchr";   TEST__u32rfindchr();
+    CURRENT_TEST = "u32find";       TEST__u32find();
+    CURRENT_TEST = "u32rfind";      TEST__u32rfind();
+    CURRENT_TEST = "u32cisalnum";   TEST__u32cisalnum();
+    CURRENT_TEST = "u32cisdigit";   TEST__u32cisdigit();
+    CURRENT_TEST = "u32cisxdigit";  TEST__u32cisxdigit();
+    CURRENT_TEST = "u32cisspace";   TEST__u32cisspace();
+    CURRENT_TEST = "u32push";       TEST__u32push();
+    CURRENT_TEST = "u32join";       TEST__u32join();
+    CURRENT_TEST = "u32replace";    TEST__u32replace();
+    CURRENT_TEST = "u32strip";      TEST__u32strip();
+    CURRENT_TEST = "u32slice";      TEST__u32slice();
+    CURRENT_TEST = "u32startswith"; TEST__u32startswith();
+    CURRENT_TEST = "u32endswith";   TEST__u32endswith();
+    CURRENT_TEST = "u32contains";   TEST__u32contains();
+    CURRENT_TEST = "u32isdigit";    TEST__u32isdigit();
 
-    u8char *out = L"%d\n%d\n%d\n";
-
-    out = u8join(out, u8join(u8join(L"tokenizer.c: Token_new         [", u8join(result_Token_new, L"]")), L"\n"));
-    out = u8join(out, u8join(u8join(L"tokenizer.c: Token_repr        [", u8join(result_Token_repr, L"]")), L"\n"));
-    out = u8join(out, u8join(u8join(L"tokenizer.c: TokenArray_new    [", u8join(result_TokenArray_new, L"]")), L"\n"));
-    out = u8join(out, u8join(u8join(L"tokenizer.c: TokenArray_append [", u8join(result_TokenArray_append, L"]")), L"\n"));
-    out = u8join(out, u8join(u8join(L"parser.c:    Node*_new         [", u8join(result_Node_new, L"]")), L"\n"));
-    out = u8join(out, u8join(u8join(L"parser.c:    NodeArray_new     [", u8join(result_NodeArray_new, L"]")), L"\n"));
-    out = u8join(out, u8join(u8join(L"parser.c:    NodeArray_append  [", u8join(result_NodeArray_append, L"]")), L"\n"));
-    out = u8join(out, u8join(u8join(L"u8string.c:  *                 [", u8join(result_u8string, L"]")), L"\n"));
-
-    wprintf(out, _TESTS, _FAILS, _IGNORES);
-
-    free(out);
+    printf("tests: %d\n", TESTS);
+    printf("fails: %d\n", FAILS);
 
     return 0;
 }

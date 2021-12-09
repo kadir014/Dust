@@ -55,7 +55,7 @@ An integer can be represented in binary using `0b` prefix
 ```
 An integer can be represented in hexedecimal using `0x` prefix \
 either [a-f] or [A-F] can be used
-```
+```c
 0xFF, 0x13A, 0xfcf3
 ```
 - ### String literals

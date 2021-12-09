@@ -115,6 +115,7 @@ bool u32isdigit(u32char *str) {
     return true;
 }
 
+//TODO: Documentate
 bool u32cisalnum(u32char chr) {
     if (chr <= U'Z' && chr >= U'a' && u32cisdigit(chr)) return true;
     return false;
@@ -784,17 +785,7 @@ char *u8readfile(char *filepath) {
 
     char *string = (char *)malloc(fsize + 1);
     fread(string, 1, fsize, f);
-    // int c = 0;
-    // size_t i = 0;
-    // while (!feof(f) && i < fsize) {
-    //     c = fgetc(f);
-    //     string = u8push(string, c);
-    //     i++;
-    // }
     fclose(f);
-
-    printf("file size: %d\n", fsize);
-    printf("buf size: %d\n", strlen(string));
 
     string[fsize] = '\0';
 

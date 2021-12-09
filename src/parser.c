@@ -142,10 +142,11 @@ Node *NodePrimitive_new(u32char *primitive) {
  * @param expression Assignment expression
  * @return Node's pointer
  */
-Node *NodeAssign_new(u32char *variable, Node *expression) {
+Node *NodeAssign_new(u32char *variable, u32char *op, Node *expression) {
     Node *node = (Node *)malloc(sizeof(Node));
     node->type = NodeType_ASSIGN;
-    node->assign_var  = variable;
+    node->assign_var = variable;
+    node->assign_op = op;
     node->assign_expr = expression;
     return node;
 }
@@ -500,6 +501,7 @@ u32char *Node_repr(Node *node, int ident) {
         case NodeType_ASSIGN:
             finalstr = u32join(finalstr, U"assignment:\n");
             finalstr = u32join(u32join(finalstr, u32join(identstr, u32join(U"var: ", node->assign_var))), U"\n");
+            finalstr = u32join(u32join(finalstr, u32join(identstr, u32join(U"op: ", node->assign_op))), U"\n");
             finalstr = u32join(finalstr, u32join(identstr, u32join(U"expr: ", Node_repr(node->assign_expr, ident+1))));
             break;
 
@@ -525,6 +527,10 @@ u32char *Node_repr(Node *node, int ident) {
 
                 case OpType_POW:
                     finalstr = u32join(finalstr, u32join(identstr, U"op: ^\n"));
+                    break;
+
+                case OpType_MOD:
+                    finalstr = u32join(finalstr, u32join(identstr, U"op: %\n"));
                     break;
 
                 case OpType_RANGE:
@@ -776,21 +782,21 @@ Node *parse_enum(TokenArray *tokens) {
         else if (token->type == TokenType_IDENTIFIER) {
 
             /* ASSIGNMENT   identifier = expression, */
-            if ((&(tokens->array[i]))->type == TokenType_IDENTIFIER &&
-               (&(tokens->array[i+1]))->type == TokenType_OPERATOR &&
-                    u32isequal((&(tokens->array[i+1]))->data, U"=")) {
+            if (tokens->array[i].type == TokenType_IDENTIFIER &&
+                tokens->array[i+1].type == TokenType_OPERATOR &&
+                u32isequal((&(tokens->array[i+1]))->data, U"=")) {
                 
-                    u32char *var = (&(tokens->array[i]))->data;
+                u32char *var = (&(tokens->array[i]))->data;
 
-                    TokenArray *slice = TokenArray_slice(tokens, i+2);
-                    TokenArray_append(slice, Token_new(TokenType_EOF, U""));
-                    Node *expr = parse_expr(slice);
-                    TokenArray_free(slice);
+                TokenArray *slice = TokenArray_slice(tokens, i+2);
+                TokenArray_append(slice, Token_new(TokenType_EOF, U""));
+                Node *expr = parse_expr(slice);
+                TokenArray_free(slice);
 
-                    NodeArray_append(node_array, NodeAssign_new(var, expr));
+                NodeArray_append(node_array, NodeAssign_new(var, U"=", expr));
 
-                    i += _last_token_count+1;
-                    continue;
+                i += _last_token_count+1;
+                continue;
             }
             
             else if (tokens->array[i+1].type == TokenType_COMMA ||
@@ -1035,38 +1041,61 @@ Node *parse_body(TokenArray *tokens) {
                           tokens->array[i].x,
                           tokens->array[i].y);
                 }
-                
-                
-                //printf("current tok: %s\n", utf32_to_utf8(Token_repr(&(tokens->array[i]))));
 
                 continue;
 
             }
             
             /* ASSIGNMENT   identifier = expression; */
-            else if ((&(tokens->array[i]))->type == TokenType_IDENTIFIER &&
-                     (&(tokens->array[i+1]))->type == TokenType_OPERATOR &&
-                      u32isequal((&(tokens->array[i+1]))->data, U"=")) {
+            else if (tokens->array[i].type == TokenType_IDENTIFIER &&
+                     tokens->array[i+1].type == TokenType_OPERATOR) {
                     
-                        u32char *var = (&(tokens->array[i]))->data;
+                    u32char *var = (&(tokens->array[i]))->data;
 
-                        TokenArray *slice = TokenArray_slicet(tokens, i+2);
-                        TokenArray_append(slice, Token_new(TokenType_EOF, U""));
-                        Node *expr = parse_expr(slice);
-                        TokenArray_free(slice);
+                    TokenArray *slice = TokenArray_slicet(tokens, i+2);
+                    TokenArray_append(slice, Token_new(TokenType_EOF, U""));
+                    Node *expr = parse_expr(slice);
+                    TokenArray_free(slice);
 
-                        NodeArray_append(node_array, NodeAssign_new(var, expr));
+                    u32char *op;
+                    if (u32isequal(tokens->array[i+1].data, U"=")) {
+                        op = U"=";
+                    }
+                    else if (u32isequal(tokens->array[i+1].data, U"+=")) {
+                        op = U"+=";
+                    }
+                    else if (u32isequal(tokens->array[i+1].data, U"-=")) {
+                        op = U"-=";
+                    }
+                    else if (u32isequal(tokens->array[i+1].data, U"*=")) {
+                        op = U"*=";
+                    }
+                    else if (u32isequal(tokens->array[i+1].data, U"/=")) {
+                        op = U"/=";
+                    }
+                    else if (u32isequal(tokens->array[i+1].data, U"^=")) {
+                        op = U"^=";
+                    }
+                    else if (u32isequal(tokens->array[i+1].data, U"%=")) {
+                        op = U"%=";
+                    }
+                    else {
+                        raise(ErrorType_Syntax, U"Invalid assignment operator", U"<stdin>",
+                              tokens->array[i+1].x, tokens->array[i+1].y);
+                    }
 
-                        // end of the expression
-                        int a = 0;
-                        while (i+a < tokens->used) {
-                            if ((&(tokens->array[a+i]))->type == TokenType_NEXTSTM ||
-                                (&(tokens->array[a+i]))->type == TokenType_EOF) break;
-                            a++;
-                        }
-                        i += a+1;
-                        continue;
-                }
+                    NodeArray_append(node_array, NodeAssign_new(var, op, expr));
+
+                    // end of the expression
+                    int a = 0;
+                    while (i+a < tokens->used) {
+                        if ((&(tokens->array[a+i]))->type == TokenType_NEXTSTM ||
+                            (&(tokens->array[a+i]))->type == TokenType_EOF) break;
+                        a++;
+                    }
+                    i += a+1;
+                    continue;
+            }
 
             /* ENUM   enum {identifier|assignment, ...} */
             else if (u32isequal(token->data, U"enum")) {
@@ -1293,6 +1322,9 @@ OpType get_optype(u32char *tokenval) {
     }
     else if (u32isequal(tokenval, U"^")) {
         return OpType_POW;
+    }
+    else if (u32isequal(tokenval, U"%")) {
+        return OpType_MOD;
     }
     else if (u32isequal(tokenval, U"..")) {
         return OpType_RANGE;
@@ -1636,7 +1668,8 @@ Node *parse_expr_POW(TokenArray *tokens) {
     Node *left = parse_expr_FACTOR(tokens);
 
     if (current_token(tokens)->type == TokenType_OPERATOR) {
-        while (u32isequal(current_token(tokens)->data, U"^")) {
+        while (u32isequal(current_token(tokens)->data, U"^") ||
+               u32isequal(current_token(tokens)->data, U"%")) {
 
             OpType optype = get_optype(current_token(tokens)->data);
             next_token(tokens);
