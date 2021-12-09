@@ -208,8 +208,11 @@ class OptionHandler:
         self.package_clean = False
 
         self.gcc_args = [] # GCC arguments
+        self.resources = [] # Resource paths
 
-        if platform.system() == "Windows": self.gcc_args.append("-lws2_32")
+        if platform.system() == "Windows":
+            self.resources.append("dust-res.res")
+            self.gcc_args.append("-lws2_32")
         else: self.gcc_args.append("-lm")
 
     def add_option(self, opt: str):
@@ -272,10 +275,11 @@ class Compiler:
         """
         Compiles on single process
         """
-        os.system("windres assets/dust.rc -O coff -o dust-res.res")
+        if platform.system() == "Windows":
+            os.system("windres assets/dust.rc -O coff -o dust-res.res")
 
         start_time = time.perf_counter()
-        os.system(f"gcc -o dust {' '.join(self.targets)} dust-res.res -I./include/ {self.option_handler.get_gcc_argstr()}")
+        os.system(f"gcc -o dust {' '.join(self.targets)} {' '.join(self.option_handler.resources)} -I./include/ {self.option_handler.get_gcc_argstr()}")
         end_time = time.perf_counter() - start_time
 
         if os.path.exists("dust-res.res"): os.remove("dust-res.res")
@@ -286,7 +290,8 @@ class Compiler:
         Compiles on multiple processes
         """
         remove_object_files()
-        os.system("windres assets/dust.rc -O coff dust-res.res")
+        if platform.system() == "Windows":
+            os.system("windres assets/dust.rc -O coff dust-res.res")
         subprocs = []
 
         start_time = time.perf_counter()
@@ -297,7 +302,7 @@ class Compiler:
             s.communicate()
 
         # Link all object files to finish compiling
-        os.system(f"gcc -o dust cli.o ustring.o error.o platform.o tokenizer.o parser.o transpiler.o dust-res.res {self.option_handler.get_gcc_argstr()}")
+        os.system(f"gcc -o dust cli.o ustring.o error.o platform.o tokenizer.o parser.o transpiler.o {' '.join(self.option_handler.resources)} {self.option_handler.get_gcc_argstr()}")
     
         end_time = time.perf_counter() - start_time
         remove_object_files()

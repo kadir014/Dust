@@ -21,20 +21,28 @@ import platform
 import subprocess
 
 
+if platform.system() == "Windows":
+    binaryfile = "tests.exe"
+    binaryrun = "tests"
+else:
+    binaryfile = "tests"
+    binaryrun = "./tests"
+
+
 print("Running tests...")
 
-if os.path.exists("tests.exe"): os.remove("tests.exe")
+if os.path.exists(binaryfile): os.remove(binaryfile)
 
 if platform.system() == "Windows":
     os.system("gcc -o tests tests.c src/ustring.c src/error.c src/platform.c src/tokenizer.c src/parser.c -I./include/ -lws2_32")
 else:
-    os.system("gcc -o tests tests.c src/ustring.c src/error.c src/platform.c src/tokenizer.c src/parser.c -I./include/")
+    os.system("gcc -o tests tests.c src/ustring.c src/error.c src/platform.c src/tokenizer.c src/parser.c -I./include/ -lm")
 
 start = time.perf_counter()
-out = subprocess.check_output("tests").decode("utf-8").replace("\r", "")
+out = subprocess.check_output(binaryrun).decode("utf-8").replace("\r", "")
 end = time.perf_counter() - start
 
-if os.path.exists("tests.exe"): os.remove("tests.exe")
+if os.path.exists(binaryfile): os.remove(binaryfile)
 
 
 max_len = 26
@@ -63,40 +71,3 @@ print(f"Ran {test_count} tests in {round(end, 3)} secs")
 print(f"{fail_count} {('fail', 'fails')[bool(fail_count-1)]}")
 print("-" * max_len)
 print("\n".join(outs))
-
-# outs = out.split("\n")
-# test_count = outs[0]
-# fail_count = outs[1]
-# ignored_count = outs[2]
-# out = outs[3:][:-1]
-
-# _out = []
-
-# for index, line in enumerate(out):
-#     i = line.find("[")
-
-#     if i == -1: continue
-
-#     if "OK" in line:
-#         out[index] = line[:i] + "[\u001b[92mPASSED\u001b[0m]"
-
-#     else:
-#         err = line[i+1:len(line)-1]
-#         if err.startswith("Expected") and err[-1] != "'": err += "'"
-#         out[index] = line[:i] + "[\u001b[91mFAILED\u001b[0m] " + err
-
-#     _out.append(out[index])
-
-
-# if os.path.exists("tests.exe"): os.remove("tests.exe")
-
-# os.system(" ")
-
-# if test_count == "1": _tests_str = "test"
-# else: _tests_str = "tests"
-# if fail_count == "1": _fails_str = "Failure"
-# else: _fails_str = "Failures"
-# print(f"Ran {test_count} {_tests_str} in {round(end, 3)} secs")
-# print(f"{fail_count} {_fails_str} {ignored_count} Ignored")
-# print("---------------------------------------")
-# print("\n".join(_out))
