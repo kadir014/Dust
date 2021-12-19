@@ -87,6 +87,16 @@ bool u32cisxdigit(u32char chr) {
 }
 
 /**
+ * @brief Checks if character is binary digit
+ * 
+ * @param chr Character to check
+ * @return (bool) result
+ */
+bool u32cisbdigit(u32char chr) {
+    return ((chr == U'0') || (chr == U'1'));
+}
+
+/**
  * @brief Checks if character is space
  * 
  * @param chr Character to check
@@ -99,6 +109,17 @@ bool u32cisspace(u32char chr) {
             chr == U'\r' ||
             chr == U'\t' ||
             chr == U'\v');
+}
+
+/**
+ * @brief Checks if character is alphanumeric
+ * 
+ * @param chr Character to check
+ * @return (bool) result
+ */
+bool u32cisalnum(u32char chr) {
+    if (chr <= U'Z' && chr >= U'a' && u32cisdigit(chr)) return true;
+    return false;
 }
 
 /**
@@ -115,15 +136,37 @@ bool u32isdigit(u32char *str) {
     return true;
 }
 
-//TODO: Documentate
-bool u32cisalnum(u32char chr) {
-    if (chr <= U'Z' && chr >= U'a' && u32cisdigit(chr)) return true;
-    return false;
+/**
+ * @brief Checks if all characters of string is hexedecimal digit
+ * 
+ * @param str String to check
+ * @return (bool) result
+ */
+bool u32isxdigit(u32char *str) {
+    while (*str) {
+        if (!u32cisxdigit(*str)) return false;
+        str++;
+    }
+    return true;
+}
+
+/**
+ * @brief Checks if all characters of string is binary digit
+ * 
+ * @param str String to check
+ * @return (bool) result
+ */
+bool u32isbdigit(u32char *str) {
+    while (*str) {
+        if (!u32cisbdigit(*str)) return false;
+        str++;
+    }
+    return true;
 }
 
 //TODO: Cover all invalid identifier cases
 /**
- * @brief Check if string is a valid identifier
+ * @brief Checks if string is a valid identifier
  * 
  * @param str String to check
  * @return (bool) result
@@ -380,7 +423,6 @@ bool u32isequal(u32char *str1, u32char *str2) {
     size_t len = u32len(str1);
     if (len != u32len(str2)) return false;
 
-    //! decleration in for loop segfaults ????
     size_t i;
     for (i = 0; i < len; i++) {
         if (str1[i] != str2[i]) return false;
@@ -407,7 +449,7 @@ bool u32startswith(u32char *str, u32char *substr) {
  * @return (bool) result
  */
 bool u32endswith(u32char *str, u32char *substr) {
-    size_t i = u32rfind(str, substr);
+    long i = u32rfind(str, substr);
     if (i < 0) return false;
     return (i == u32len(str) - u32len(substr));
 }
@@ -458,8 +500,8 @@ void u32copy(u32char *dest, u32char *src) {
  * @param str String to find
  * @return Index of the found string (-1 if not found)
  */
-size_t u32find(u32char *src, u32char *str) {
-    size_t i = 0;
+long u32find(u32char *src, u32char *str) {
+    long i = 0;
     size_t len = u32len(str);
 
     while (src[i] != '\0') {
@@ -486,8 +528,8 @@ size_t u32find(u32char *src, u32char *str) {
  * @param chr Character to find
  * @return Index of the found character (-1 if not found)
  */
-size_t u32findchr(u32char *src, u32char chr) {
-    size_t i = 0;
+long u32findchr(u32char *src, u32char chr) {
+    long i = 0;
 
     for (; *src != '\0'; ++src) {
         if (*src == chr) return i;
@@ -505,9 +547,9 @@ size_t u32findchr(u32char *src, u32char chr) {
  * @param str String to find
  * @return Index of the found string (-1 if not found)
  */
-size_t u32rfind(u32char *src, u32char *str) {
+long u32rfind(u32char *src, u32char *str) {
     size_t len = u32len(str);
-    size_t i = u32len(src)-len;
+    long i = u32len(src)-len;
 
     while (i > 0) {
         bool a = 0;
@@ -533,9 +575,9 @@ size_t u32rfind(u32char *src, u32char *str) {
  * @param str String to find
  * @return Index of the found string (-1 if not found)
  */
-size_t u8rfind(char *src, char *str) {
+long u8rfind(char *src, char *str) {
     size_t len = strlen(str);
-    size_t i = strlen(src)-len;
+    long i = strlen(src)-len;
 
     while (i > 0) {
         bool a = 0;
@@ -561,8 +603,8 @@ size_t u8rfind(char *src, char *str) {
  * @param chr Character to find
  * @return Index of the found character (-1 if not found)
  */
-size_t u32rfindchr(u32char *src, u32char chr) {
-    size_t i = u32len(src)-1;
+long u32rfindchr(u32char *src, u32char chr) {
+    long i = u32len(src)-1;
 
     while (i > 0) {
         if (src[i] == chr) return i;
@@ -619,6 +661,7 @@ size_t u32countchr(u32char *str, u32char chr) {
     return count;
 }
 
+// TODO: Possible memory leak from temporary u32join calls
 /**
  * @brief Join two strings and return the result
  * 

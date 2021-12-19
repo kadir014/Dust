@@ -241,7 +241,26 @@ u32char *TokenArray_repr(TokenArray *token_array) {
 void tokenize_append(Token* token, TokenArray *tokens, int x, int y) {
     u32char *t = u32replace(u32strip(token->data), U"\n", U"");
 
+    // Decimal integer literal
     if (u32isdigit(t)) {
+        token->type = TokenType_NUMERIC;
+        token->data = t;
+        token->x = x;
+        token->y = y;
+        TokenArray_append(tokens, token);
+    }
+
+    // Hexedecimal integer literal
+    else if (t[0] == U'0' && t[1] == U'x' && u32isxdigit(u32slice(t, 2, u32len(t)))) {
+        token->type = TokenType_NUMERIC;
+        token->data = t;
+        token->x = x;
+        token->y = y;
+        TokenArray_append(tokens, token);
+    }
+
+    // Binary integer literal
+    else if (t[0] == U'0' && t[1] == U'b' && u32isbdigit(u32slice(t, 2, u32len(t)))) {
         token->type = TokenType_NUMERIC;
         token->data = t;
         token->x = x;
@@ -329,7 +348,7 @@ TokenArray *tokenize(u32char *raw){
                 x++;
 
                 if (i > u32len(raw)) {
-                    raise(ErrorType_Syntax, U"String not closed", U"<raw>", x, y);
+                    raise(ErrorType_Syntax, U"String not closed", U"<stdin>", x, y);
                 }
 
                 if (raw[i] == string_type) break;
@@ -561,7 +580,7 @@ TokenArray *tokenize(u32char *raw){
         TokenArray_append(tokens, Token_new(TokenType_EOF, U""));
     }
     else {
-        raise(ErrorType_Syntax, U"Expected ;", U"<raw>",
+        raise(ErrorType_Syntax, U"Expected ;", U"<stdin>",
            tokens->array[tokens->used - 1].x,
            tokens->array[tokens->used - 1].y);
     }

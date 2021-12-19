@@ -73,6 +73,7 @@ SOURCE_FILES = [
     DUST_PATH / "src" / "ustring.c",
     DUST_PATH / "src" / "error.c",
     DUST_PATH / "src" / "platform.c",
+    DUST_PATH / "src" / "io.c",
     DUST_PATH / "src" / "tokenizer.c",
     DUST_PATH / "src" / "parser.c",
     DUST_PATH / "src" / "transpiler.c"
@@ -83,6 +84,7 @@ INCLUDE_FILES = [
     DUST_PATH / "include" / "dust" / "ustring.h",
     DUST_PATH / "include" / "dust" / "error.h",
     DUST_PATH / "include" / "dust" / "ansi.h",
+    DUST_PATH / "include" / "dust" / "io.h",
     DUST_PATH / "include" / "dust" / "parser.h",
     DUST_PATH / "include" / "dust" / "platform.h",
     DUST_PATH / "include" / "dust" / "transpiler.h"
@@ -213,7 +215,13 @@ class OptionHandler:
         if platform.system() == "Windows":
             self.resources.append("dust-res.res")
             self.gcc_args.append("-lws2_32")
-        else: self.gcc_args.append("-lm")
+
+        elif platform.system() == "Linux":
+            self.gcc_args.append("-lm")
+
+        elif platform.system() == "Darwin":
+            self.gcc_args.append("-framework CoreServices")
+
 
     def add_option(self, opt: str):
         if opt.startswith("-j"):
@@ -221,7 +229,7 @@ class OptionHandler:
                 self.cores = int(opt[2:])
 
             except ValueError:
-                raise OptionError(f"integer expected after -j flag (-j0, -j4, etc..)")
+                raise OptionError("integer expected after -j flag (-j0, -j4, etc..)")
 
         elif opt.startswith("-O"):
             try:
@@ -230,7 +238,7 @@ class OptionHandler:
                     raise OptionError("invalid optimization level")
 
             except ValueError:
-                raise OptionError(f"integer expected after -O flag (-O0, -O2, etc..)")
+                raise OptionError("integer expected after -O flag (-O0, -O2, etc..)")
 
         elif opt.startswith("--clean"):
             self.clean = True

@@ -5,3 +5,4 @@ Altough the language is not complete yet, you can have a basic understanding of 
 - [Lexical syntax](01_lexical.md)
 - [Grammar specification](02_grammar.md)
 - [Basic data types](03_data_types.md)
+- [Data structures](04_data_structures.md)

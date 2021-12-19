@@ -19,7 +19,7 @@
 
 #define DUST_VERSION_MAJOR 0
 #define DUST_VERSION_MINOR 0
-#define DUST_VERSION_PATCH 17
+#define DUST_VERSION_PATCH 18
 #define DUST_VERSION_STR            \
         STR(DUST_VERSION_MAJOR) "." \
         STR(DUST_VERSION_MINOR) "." \

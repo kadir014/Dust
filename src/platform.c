@@ -12,45 +12,20 @@
 #include <stdlib.h>
 #include "dust/ustring.h"
 #include "dust/error.h"
+#include "dust/platform.h"
 
-#if defined(_WIN32)
+#if OS == OS_WINDOWS
 #include <winsock2.h>
 #include <windows.h>
-#elif defined(__linux__)
+
+#elif OS == OS_LINUX
 #include <sys/utsname.h>
-#endif
 
+#elif OS == OS_MACOS
+#include <CoreServices/CoreServices.h>
+#include <sys/utsname.h>
 
-/**
- * @brief Get generic system name
- * 
- * @return String of system name
- */
-u32char *get_osname() {
-#if defined(_WIN32)
-    return U"Windows";
-#elif defined(__linux__)
-    return U"Linux";
-#elif defined(__APPLE__)
-    return U"MacOS";
-#elif defined(__FreeBSD__)
-    return U"FreeBSD";
-#elif defined(__NetBSD__)
-    return U"NetBSD"
-#elif defined(__OpenBSD__)
-    return U"OpenBSD"
-#elif defined(__DragonFly__)
-    return U"DragonFly"
-#elif defined(__CYGWIN__)
-    return U"Cygwin"
-#elif defined(__amigaos__)
-    return U"AmigaOS"
-#elif defined(__ANDROID__)
-    return U"Android"
-#else
-    return U"other";
 #endif
-}
 
 
 /**
@@ -76,7 +51,7 @@ typedef struct {
 Platform get_platform(){
     Platform platform;
 
-    #if defined(_WIN32)
+    #if OS == OS_WINDOWS
 
     platform.name = U"Windows";
     platform.kernel = U"Windows";
@@ -125,123 +100,144 @@ Platform get_platform(){
     platform.hostname = utf8_to_utf32(hostname);
 
 
-    #elif defined(__linux__)
+    #elif OS == OS_LINUX
 
     FILE *fp;
     char line[128];
 
-    fp = popen("lsb_release -idr", "r");
-    if (fp == NULL) {
-        raise_internal(L"popen failed");
-    }
+    fp = fopen("/etc/os-release", "r");
+    if (fp == NULL) raise_internal(U"reading file '/etc/os-release' failed");
 
     while (fgets(line, sizeof(line), fp) != NULL) {
         u32char *uline = utf8_to_utf32(line);
 
-        if (u32startswith(uline, L"Distributor ID:")) {
-            u32char *new = u32strip(u32slice(uline, u32find(uline, L":")+1, u32len(uline)));
+        if (u32startswith(uline, U"NAME=")) {
+            u32char *new = u32strip(u32slice(uline, u32find(uline, U"=")+1, u32len(uline)));
             platform.name = new;
         }
 
-        else if (u32startswith(uline, L"Description:")) {
-            u32char *new = u32strip(u32slice(uline, u32find(uline, L":")+1, u32len(uline)));
+        else if (u32startswith(uline, U"PRETTY_NAME=")) {
+            u32char *new = u32strip(u32slice(uline, u32find(uline, U"=")+1, u32len(uline)));
             platform.prettyname = new;
-        }
-
-        else if (u32startswith(uline, L"Release:")) {
-            u32char *new = u32strip(u32slice(uline, u32find(uline, L":")+1, u32len(uline)));
-            platform.version = new;
         }
     }
 
-    pclose(fp);
+    fclose(fp);
 
     struct utsname uts;
     uname(&uts);
+
+    if (u32startswith(platform.name, U"Manjaro") || u32startswith(platform.name, U"Ubuntu")) {
+        fp = fopen("/etc/lsb-release", "r");
+        if (fp == NULL) raise_internal(U"reading file '/etc/lsb-release' failed");
+
+        while (fgets(line, sizeof(line), fp) != NULL) {
+            u32char *uline = utf8_to_utf32(line);
+
+            if (u32startswith(uline, U"DISTRIB_RELEASE=")) {
+                u32char *new = u32strip(u32slice(uline, u32find(uline, U"=")+1, u32len(uline)));
+                platform.version = new;
+            }
+        }
+
+        fclose(fp);
+    }
+    else {
+        platform.version = utf8_to_utf32(uts.release)
+    }
     
     platform.kernel = utf8_to_utf32(uts.sysname);
 
     platform.hostname = utf8_to_utf32(uts.nodename);
 
 
-    #elif defined(__APPLE__)
+    #elif OS == OS_MACOS
 
-    // TODO
-    platform.kernel = L"Unix";
-    platform.name = L"unknown";
-    platform.hostname = L"unknown";
-    platform.prettyname = L"unknown";
-    platform.version = L"unknown";
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wno-deprecated"
+
+    SInt32 osx_major_version, osx_minor_version, osx_patch_version;
+
+    Gestalt(gestaltSystemVersionMajor, &osx_major_version);
+    Gestalt(gestaltSystemVersionMinor, &osx_minor_version);
+    Gestalt(gestaltSystemVersionBugFix, &osx_patch_version);
+
+    #pragma GCC diagnostic pop
+
+    struct utsname uts;
+    uname(&uts);
+
+    platform.kernel = utf8_to_utf32(uts.sysname);
+    platform.name = U"MacOS";
+    platform.hostname = utf8_to_utf32(uts.nodename);
+
+    char *osxverstr;
+    sprintf(osxverstr, "%u.%u.%u",
+            osx_major_version,
+            osx_minor_version,
+            osx_patch_version);
+    platform.version = utf8_to_utf32(osxverstr);
+
+    // https://en.wikipedia.org/wiki/MacOS_version_history
+    if (osx_major_version == 10 && osx_minor_version == 0) {
+        platform.prettyname = U"MacOS Cheetah";
+    }
+    else if (osx_major_version == 10 && osx_minor_version == 1) {
+        platform.prettyname = U"MacOS Puma";
+    }
+    else if (osx_major_version == 10 && osx_minor_version == 2) {
+        platform.prettyname = U"MacOS Jaguar";
+    }
+    else if (osx_major_version == 10 && osx_minor_version == 3) {
+        platform.prettyname = U"MacOS Panther";
+    }
+    else if (osx_major_version == 10 && osx_minor_version == 4) {
+        platform.prettyname = U"MacOS Tiger";
+    }
+    else if (osx_major_version == 10 && osx_minor_version == 5) {
+        platform.prettyname = U"MacOS Leopard";
+    }
+    else if (osx_major_version == 10 && osx_minor_version == 6) {
+        platform.prettyname = U"MacOS Snow Leopard";
+    }
+    else if (osx_major_version == 10 && osx_minor_version == 7) {
+        platform.prettyname = U"MacOS Lion";
+    }
+    else if (osx_major_version == 10 && osx_minor_version == 8) {
+        platform.prettyname = U"MacOS Mountain Lian";
+    }
+    else if (osx_major_version == 10 && osx_minor_version == 9) {
+        platform.prettyname = U"MacOS Mavericks";
+    }
+    else if (osx_major_version == 10 && osx_minor_version == 10) {
+        platform.prettyname = U"MacOS Yosemite";
+    }
+    else if (osx_major_version == 10 && osx_minor_version == 11) {
+        platform.prettyname = U"MacOS El Capitan";
+    }
+    else if (osx_major_version == 10 && osx_minor_version == 12) {
+        platform.prettyname = U"MacOS Sierra";
+    }
+    else if (osx_major_version == 10 && osx_minor_version == 13) {
+        platform.prettyname = U"MacOS High Sierra";
+    }
+    else if (osx_major_version == 10 && osx_minor_version == 14) {
+        platform.prettyname = U"MacOS Mojave";
+    }
+    else if (osx_major_version == 10 && osx_minor_version == 15) {
+        platform.prettyname = U"MacOS Catalina";
+    }
+    else if (osx_major_version == 11) {
+        platform.prettyname = U"MacOS Big Sur";
+    }
+    else if (osx_major_version == 12) {
+        platform.prettyname = U"MacOS Monterey";
+    }
+    else {
+        platform.prettyname = U"MacOS";
+    }
 
     #endif
 
     return platform;
 }
-
-
-//TODO: improve gathering of CPU information, currently disabled
-#ifdef ALLOW_CPU_INFO
-/*
-  u8char *name   ->  Processor name
-  int corecount  ->  Core count
-*/
-typedef struct {
-    u32char *name;
-    int corecount;
-} CPUInfo;
-
-/*
-  Get processor information, return CPUInfo struct
-*/
-CPUInfo *get_cpuinfo() {
-    CPUInfo *cpuinfo = (CPUInfo *)malloc(sizeof(CPUInfo));
-
-    #if defined(_WIN32)
-
-    FILE *fp;
-    char line[128];
-
-    fp = popen("wmic cpu get NumberOfCores", "r");
-    if (fp == NULL) {
-        raise_internal(L"popen failed");
-    }
-
-    while (fgets(line, sizeof(line), fp) != NULL) {
-        u32char *uline = (u32char *)malloc(128*sizeof(u8char));
-        swprintf(uline, 128, L"%hs", line);
-        uline = u8replace(uline, L"\n", L"");
-        uline = u8strip(uline);
-
-        if (!u8startswith(uline, L"NumberOfCores") && wcslen(uline) > 0) {
-            u8char *end;
-            int corecount = wcstol(uline, &end, 10);
-            cpuinfo->corecount = corecount;
-        }
-    }
-    pclose(fp);
-
-    FILE *fp_;
-    char line_[128];
-
-    fp_ = popen("wmic cpu get Name", "r");
-    if (fp_ == NULL) {
-        raise_internal(L"popen failed");
-    }
-
-    while (fgets(line_, sizeof(line_), fp_) != NULL) {
-        u8char *uline = (u8char *)malloc(128*sizeof(u8char));
-        swprintf(uline, 128, L"%hs", line_);
-        uline = u8replace(uline, L"\n", L"");
-        uline = u8strip(uline);
-
-        if (!u8startswith(uline, L"Name") && wcslen(uline) > 0) {
-            cpuinfo->name = uline;
-        }
-    }
-    pclose(fp_);
-
-    #endif
-
-    return cpuinfo;
-}
-#endif

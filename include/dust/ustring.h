@@ -50,15 +50,15 @@ void u32concat(u32char *dest, u32char *src);
 
 void u32copy(u32char *dest, u32char *src);
 
-size_t u32find(u32char *src, u32char *str);
+long u32find(u32char *src, u32char *str);
 
-size_t u32findchr(u32char *src, u32char chr);
+long u32findchr(u32char *src, u32char chr);
 
-size_t u32rfind(u32char *src, u32char *str);
+long u32rfind(u32char *src, u32char *str);
 
-size_t u8rfind(char *src, char *str);
+long u8rfind(char *src, char *str);
 
-size_t u32rfindchr(u32char *src, u32char chr);
+long u32rfindchr(u32char *src, u32char chr);
 
 size_t u32count(u32char *str, u32char *substr);
 
@@ -80,9 +80,15 @@ bool u32cisdigit(u32char chr);
 
 bool u32cisxdigit(u32char chr);
 
+bool u32cisbdigit(u32char chr);
+
 bool u32cisspace(u32char chr);
 
 bool u32isdigit(u32char *str);
+
+bool u32isxdigit(u32char *str);
+
+bool u32isbdigit(u32char *str);
 
 char *u8readfile(char *filepath);
 
