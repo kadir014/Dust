@@ -29,26 +29,11 @@
 
 
 /**
- * @param name OS Name
- * @param kernel Kernel name
- * @param hostname Device host/node name
- * @param version OS version
- * @param prettyname Pretty OS name (Usually OS name + version)
- */
-typedef struct {
-    u32char *name;
-    u32char *kernel;
-    u32char *hostname;
-    u32char *version;
-    u32char *prettyname;
-} Platform;
-
-/**
  * @brief Get platform information
  * 
  * @return Platform object
  */
-Platform get_platform(){
+Platform get_platform() {
     Platform platform;
 
     #if OS == OS_WINDOWS
