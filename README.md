@@ -8,7 +8,8 @@
 <strong>Dust Programming Language</strong>
 </p>
 <br><br>
-Dust is a simple open-source general purpose programming language interpreted in C. 
+Dust is a simple open-source general purpose programming language interpreted in C.
+
 Discord server: https://discord.gg/TuPNM3cMtz
 
 ## Building
@@ -19,7 +20,7 @@ MinGW binaries must be in PATH and Python 3.6+ should be used.
 Run `build.py` script to build the project. (Check the docstring in the file for details)
 
 ## Usage
-You can see all commands & options by running `dust -v` in the command line.
+You can see all commands & options by running `dust -h` in the command line.
 
 ## Testing
 Just run `tests_run.py` script to run tests.
